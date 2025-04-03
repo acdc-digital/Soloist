@@ -1,0 +1,14 @@
+{
+  "name": "electron",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsc && electron .",
+    "build": "tsc && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^35.1.3",
+    "electron-builder": "^23.6.0",
+    "typescript": "^5.0.4"
+  }
+}

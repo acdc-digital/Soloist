@@ -1,0 +1,8 @@
+packages:
+  - electron
+  - renderer
+  - convex
+ignoredBuiltDependencies:
+  - electron
+  - esbuild
+  - sharp

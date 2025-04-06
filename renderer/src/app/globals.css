@@ -120,3 +120,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+html, body {
+  background: transparent;
+  /* other global styles */
+}

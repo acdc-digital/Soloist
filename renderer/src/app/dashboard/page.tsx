@@ -1,3 +1,8 @@
+// DASHBOARD
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/page.tsx
+
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -7,53 +12,48 @@ import { signOut } from "../../../convex/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DashboardIcon, GearIcon, PersonIcon, ExitIcon } from "@radix-ui/react-icons";
+import { DashboardIcon, GearIcon, PersonIcon } from "@radix-ui/react-icons";
+
+import { useUserStore } from "@/store/userStore";
+import { useEffect } from "react";
+import Sidebar from "./_components/sidebar";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const { user } = useUser();
+  const setStoreUser = useUserStore((state) => state.setUser);
   
-  // Example query - replace with your actual Convex query
-  // const data = useQuery(api.documents.list);
+  // Sync Convex user with our store
+  useEffect(() => {
+    if (user) {
+      setStoreUser({
+        id: user.id || "",
+        name: user.name || "",
+        email: user.email || "",
+        profilePicture: user.imageUrl
+      });
+    }
+  }, [user, setStoreUser]);
 
   const handleSignOut = async () => {
     await signOut();
+    useUserStore.getState().signOut();
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b bg-white shadow-sm">
-        <div className="flex h-16 items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-2">
-            <DashboardIcon className="h-6 w-6" />
-            <h1 className="text-xl font-semibold">Your App</h1>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {user && (
-              <div className="flex items-center gap-2">
-                <div className="text-sm font-medium">
-                  {user.name || user.email || "User"}
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handleSignOut}
-                  title="Sign out"
-                >
-                  <ExitIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+    <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900">
+      {/* Sidebar */}
+      <Sidebar />
 
-      {/* Main content */}
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-          <div className="md:col-span-2 lg:col-span-3">
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="mx-auto max-w-6xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Dashboard</h1>
+            </div>
+
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <div className="flex items-center justify-between">
                 <TabsList>
@@ -61,16 +61,6 @@ export default function Dashboard() {
                   <TabsTrigger value="analytics">Analytics</TabsTrigger>
                   <TabsTrigger value="reports">Reports</TabsTrigger>
                 </TabsList>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <PersonIcon className="mr-2 h-4 w-4" />
-                    Profile
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <GearIcon className="mr-2 h-4 w-4" />
-                    Settings
-                  </Button>
-                </div>
               </div>
               
               <TabsContent value="overview" className="mt-4">
@@ -144,50 +134,8 @@ export default function Dashboard() {
               </TabsContent>
             </Tabs>
           </div>
-          
-          {/* Sidebar */}
-          <div className="flex flex-col gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-2">
-                <Button variant="outline" size="sm" className="justify-start">
-                  Create New Project
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start">
-                  Invite Team Member
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start">
-                  View Reports
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4 text-sm">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <div>Project {i} updated</div>
-                    <div className="ml-auto text-xs text-muted-foreground">
-                      {i}h ago
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-              <CardFooter className="border-t px-6 py-2">
-                <Button variant="ghost" size="sm" className="w-full justify-center">
-                  View All
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

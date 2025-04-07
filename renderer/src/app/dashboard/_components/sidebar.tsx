@@ -1,3 +1,6 @@
+// SIDEBAR
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/sidebar.tsx
+
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -100,7 +103,7 @@ export function Sidebar({ className }: SidebarProps) {
               />
               <Input
                 placeholder="Search"
-                className="h-9 rounded-lg pl-8 text-2xs bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-300/60 dark:border-zinc-700/60 focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
+                className="h-9 rounded-lg pl-8 text-2xs bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-300/60 dark:border-zinc-700/60 focus:outline-none"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 tabIndex={collapsed ? -1 : 0}
@@ -122,7 +125,7 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
 
         {/* Bottom Section */}
-        <div className="flex flex-col space-y-2 p-2 pb-3">
+        <div className="flex flex-col space-y-2 p-2 pb-12">
           <div className="-mx-2">
             <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40" />
           </div>

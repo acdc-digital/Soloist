@@ -50,7 +50,7 @@ export default function Dashboard() {
   // Query daily logs
   const dailyLogs = useQuery(api.dailyLogs.listDailyLogs, { userId, year });
 
-  // Zustand store for right sidebar
+  // Zustand store for additional sidebar usage
   const { setSelectedDate, setSidebarMode } = useSidebarStore();
 
   // Handler to open sidebar for selected date
@@ -76,23 +76,23 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-full bg-zinc-50 dark:bg-zinc-900">
-      {/* Sidebar */}
+      {/* Sidebar on the left */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 p-4">
-          <div>
-            <Controls />
-          </div>
-          {/* Our Heatmap fills available width/height */}
-          <div className="h-full w-full">
-            <Heatmap
-              dailyLogs={dailyLogs}
-              year={year}
-              onSelectDate={handleSelectDate}
-            />
-          </div>
+      <main className="flex-1 flex flex-col">
+        {/* Smaller, sticky controls area */}
+        <div className="sticky top-0 z-10 bg-zinc-50 dark:bg-zinc-900 px-2 mt-2">
+          <Controls />
+        </div>
+
+        {/* Reduced spacing for the main content */}
+        <div className="flex-1 overflow-auto px-2 pb-2">
+          <Heatmap
+            dailyLogs={dailyLogs}
+            year={year}
+            onSelectDate={handleSelectDate}
+          />
         </div>
       </main>
     </div>

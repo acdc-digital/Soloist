@@ -13,7 +13,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
-
+import { useFeedStore } from "@/store/feedStore"; // for setSelectedDate, setSidebarOpen
 interface DailyLog {
   date: string;
   score?: number;
@@ -60,6 +60,9 @@ function getColorClass(score: number | null | undefined): string {
 }
 
 export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps) {
+  // Destructure setSelectedDate and setSidebarOpen from feed store
+  const { setSelectedDate } = useFeedStore();
+  
   // Create a map for quick lookups
   const logsMap = React.useMemo(() => {
     const map = new Map<string, DailyLog>();
@@ -106,6 +109,11 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
   );
 
   const handleDayClick = (dateKey: string) => {
+    // 1) Save the date in feed store
+    setSelectedDate(dateKey);
+    // 2) Open feed sidebar
+    setSidebarOpen(true);
+    // 3) Also call onSelectDate if provided
     if (onSelectDate) {
       onSelectDate(dateKey);
     }

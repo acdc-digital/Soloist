@@ -1,3 +1,6 @@
+// SIDEBAR
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/sidebar.tsx
+
 "use client";
 
 import React from "react";

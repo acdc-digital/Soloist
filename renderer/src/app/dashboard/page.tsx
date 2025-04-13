@@ -1,3 +1,6 @@
+// DASHBOARD
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/page.tsx
+
 "use client";
 
 import React, { useEffect } from "react";
@@ -9,12 +12,13 @@ import { signOut } from "../../../convex/auth";
 import { useUser } from "@/hooks/useUser";
 import { useUserStore } from "@/store/userStore";
 import { useSidebarStore } from "@/store/sidebarStore";
-import { useFeedStore } from "@/store/feedStore"; // references sidebarOpen, toggleSidebar, setSelectedDate
+import { useFeedStore, RightSidebarTab } from "@/store/feedStore"; // contains sidebarOpen, toggleSidebar, setSelectedDate, selectedDate, activeTab, setActiveTab
 
 // Components
-import Sidebar from "./_components/Sidebar";
+import Sidebar from "./_components/sidebar";
 import Heatmap from "./_components/Heatmap";
 import Controls from "./_components/Controls";
+import DailyLogForm from "./_components/dailyLogForm";
 import Feed from "./_components/Feed";
 import { RightSidebar } from "./_components/RightSidebar";
 
@@ -26,10 +30,9 @@ export default function Dashboard() {
   const { user } = useUser();
   const setStoreUser = useUserStore((state) => state.setUser);
 
-  // From feedStore: control the right sidebar state
-  const { sidebarOpen, toggleSidebar, setSelectedDate } = useFeedStore();
+  // From feedStore: state for right sidebar and active tab
+  const { sidebarOpen, toggleSidebar, selectedDate, setSelectedDate, activeTab, setSidebarOpen, setActiveTab } = useFeedStore();
 
-  // Sync user data
   useEffect(() => {
     if (user) {
       setStoreUser({
@@ -41,7 +44,6 @@ export default function Dashboard() {
     }
   }, [user, setStoreUser]);
 
-  // Sign out
   const handleSignOut = async () => {
     await signOut();
     useUserStore.getState().signOut();
@@ -67,39 +69,59 @@ export default function Dashboard() {
     );
   }
 
-  // Handler: When a day is clicked, open the feed sidebar.
+  // When a day is clicked, update the store and open the right sidebar.
   const handleSelectDate = (dateString: string) => {
     setSelectedDate(dateString);
-    // Optionally, also set left sidebar mode if needed:
-    // setSidebarMode("logForm");
-    toggleSidebar();
+    setActiveTab("log");
+    // Optionally, default to showing the DailyLogForm tab when a day is selected.
+    // If you want to switch tab programmatically, uncomment the line below:
+    // setActiveTab("log");
+    setSidebarOpen(true);
   };
 
   return (
     <div className="flex h-full bg-zinc-50 dark:bg-zinc-900">
-      {/* Left sidebar */}
+      {/* Left Sidebar */}
       <Sidebar />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative">
-        <div className="sticky top-0 z-10 bg-zinc-50 dark:bg-zinc-900 px-2 mt-2 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-zinc-50 dark:bg-zinc-900 px-2 mt-2 mb-2">
           <Controls />
-          <Button variant="outline" size="sm" onClick={toggleSidebar}>
-            {sidebarOpen ? "Close Feed" : "Open Feed"}
-          </Button>
         </div>
-        <div className="flex-1 overflow-auto px-2 pb-2">
+        <div className="flex-1 overflow-auto px-3 pb-2">
           <Heatmap dailyLogs={dailyLogs} year={year} onSelectDate={handleSelectDate} />
         </div>
       </main>
 
-      {/* Right Sidebar as a flex item */}
+      {/* Right Sidebar: it displays either the DailyLogForm (if "log" tab is active) or the Feed (if "feed" tab is active) */}
       <RightSidebar
         open={sidebarOpen}
-        onClose={() => toggleSidebar()}
-        title="My Feed"
+        onClose={() => {
+          toggleSidebar();
+          setSelectedDate(null);
+        }}
+        title={activeTab === "log" ? "Daily Log Form" : "Feed"}
       >
-        <Feed userId={userId} />
+        {activeTab === "log" ? (
+          selectedDate ? (
+            <DailyLogForm
+              onClose={() => {
+                toggleSidebar();
+                setSelectedDate(null);
+              }}
+              date={selectedDate}
+            />
+          ) : (
+            <div className="p-4 text-sm text-zinc-500">
+              Click a day on the calendar to open the log form.
+            </div>
+          )
+        ) : activeTab === "feed" ? (
+          <Feed userId={userId} />
+        ) : (
+          <div className="p-4 text-sm text-zinc-500">No content.</div>
+        )}
       </RightSidebar>
     </div>
   );

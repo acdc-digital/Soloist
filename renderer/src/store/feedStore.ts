@@ -12,6 +12,9 @@ export interface FeedMessage {
   message: string;
 }
 
+// Define possible tab values
+export type RightSidebarTab = 'log' | 'feed';
+
 interface FeedState {
   feedMessages: FeedMessage[] | null;
   setFeedMessages: (messages: FeedMessage[] | null) => void;
@@ -24,7 +27,11 @@ interface FeedState {
 
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  toggleSidebar: () => void;
+  toggleSidebar: () => void; // Keep toggle if used elsewhere, but prefer setSidebarOpen
+
+  // New state for the active tab in the right sidebar
+  activeTab: RightSidebarTab;
+  setActiveTab: (tab: RightSidebarTab) => void;
 }
 
 export const useFeedStore = create<FeedState>((set) => ({
@@ -37,8 +44,11 @@ export const useFeedStore = create<FeedState>((set) => ({
   selectedDate: null,
   setSelectedDate: (date) => set({ selectedDate: date }),
 
-  // The feed sidebar open/close logic
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+
+  // Initialize active tab, e.g., 'log'
+  activeTab: 'log',
+  setActiveTab: (tab) => set({ activeTab: tab }),
 }));

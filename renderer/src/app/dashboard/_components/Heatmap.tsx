@@ -1,4 +1,4 @@
-// HEATMAP
+// HEATMAP CALENDAR
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/Heatmap.tsx
 
 "use client";
@@ -13,7 +13,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
-import { useFeedStore } from "@/store/feedStore"; // for setSelectedDate, setSidebarOpen
+
 interface DailyLog {
   date: string;
   score?: number;
@@ -33,7 +33,6 @@ function buildDateKey(dateObj: Date): string {
 }
 
 function getAllDatesInYear(year: number): Date[] {
-  // Simplistic approach: 365 days (not accounting for leap years).
   const start = new Date(year, 0, 1);
   const end = new Date(year, 11, 31);
   const dates: Date[] = [];
@@ -60,28 +59,24 @@ function getColorClass(score: number | null | undefined): string {
 }
 
 export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps) {
-  // Destructure setSelectedDate and setSidebarOpen from feed store
-  const { setSelectedDate } = useFeedStore();
+  // Destructure both setSelectedDate and setSidebarOpen from feed store
+  // const { setSelectedDate, setSidebarOpen } = useFeedStore();
   
-  // Create a map for quick lookups
   const logsMap = React.useMemo(() => {
     const map = new Map<string, DailyLog>();
     dailyLogs.forEach((log) => map.set(log.date, log));
     return map;
   }, [dailyLogs]);
 
-  // Stats
   const totalLogs = dailyLogs.length;
   const averageScore =
     dailyLogs.reduce((sum, log) => sum + (log.score ?? 0), 0) /
     Math.max(1, totalLogs);
 
-  // Today highlight
   const today = new Date();
   const isThisYear = today.getFullYear().toString() === year;
   const todayKey = isThisYear ? buildDateKey(today) : null;
 
-  // Legend hover
   const [hoveredLegend, setHoveredLegend] = React.useState<string | null>(null);
 
   const legendItems = [
@@ -102,18 +97,12 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
     },
   ];
 
-  // All dates for the year
   const allDates = React.useMemo(
     () => getAllDatesInYear(parseInt(year, 10)),
     [year]
   );
 
   const handleDayClick = (dateKey: string) => {
-    // 1) Save the date in feed store
-    setSelectedDate(dateKey);
-    // 2) Open feed sidebar
-    setSidebarOpen(true);
-    // 3) Also call onSelectDate if provided
     if (onSelectDate) {
       onSelectDate(dateKey);
     }
@@ -124,19 +113,12 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
       className="border border-zinc-200 dark:border-zinc-700 rounded-md p-3 flex flex-col h-full"
       style={{ minHeight: "400px" }}
     >
-      {/* Top row: Stats on left, Info icon on right */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm">
-          <Badge
-            variant="outline"
-            className="border-zinc-700 text-zinc-600 dark:text-zinc-300"
-          >
+          <Badge variant="outline" className="border-zinc-700 text-zinc-600 dark:text-zinc-300">
             {totalLogs} Logs
           </Badge>
-          <Badge
-            variant="outline"
-            className="border-zinc-700 text-zinc-600 dark:text-zinc-300"
-          >
+          <Badge variant="outline" className="border-zinc-700 text-zinc-600 dark:text-zinc-300">
             Avg: {Number.isNaN(averageScore) ? "0.0" : averageScore.toFixed(1)}
           </Badge>
         </div>
@@ -154,7 +136,6 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
         </TooltipProvider>
       </div>
 
-      {/* Middle scrollable area for day blocks */}
       <div className="flex-1 overflow-auto">
         <ScrollArea className="w-full h-full">
           <div className="flex flex-wrap gap-1 p-1">
@@ -163,7 +144,6 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
               const dayLog = logsMap.get(dateKey);
               const score = dayLog?.score ?? null;
 
-              // hoveredLegend logic
               let shouldHighlight = hoveredLegend === null;
               if (hoveredLegend) {
                 const legendItem = legendItems.find(
@@ -216,7 +196,6 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
         </ScrollArea>
       </div>
 
-      {/* Legend (bottom) */}
       <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
         <div className="mb-2">Score legend:</div>
         <div className="flex flex-wrap gap-2">

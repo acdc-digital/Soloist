@@ -28,8 +28,6 @@ import { Button } from "@/components/ui/button";
 export default function Dashboard() {
   const { user } = useUser();
   const setStoreUser = useUserStore((state) => state.setUser);
-
-  // Our left sidebar store: we can read or set the 'collapsed' value
   const { collapsed, setCollapsed } = useSidebarStore();
 
   // Our feed store: if 'sidebarOpen' is true, the feed is open
@@ -43,6 +41,7 @@ export default function Dashboard() {
     setSidebarOpen,
   } = useFeedStore();
 
+  // First effect: keep user store in sync
   useEffect(() => {
     if (user) {
       setStoreUser({
@@ -54,6 +53,22 @@ export default function Dashboard() {
     }
   }, [user, setStoreUser]);
 
+  // Second effect: auto-collapse left sidebar if (window < 1256) & feed is open
+  useEffect(() => {
+    function handleWindowResize() {
+      if (window.innerWidth < 1256 && sidebarOpen) {
+        setCollapsed(true);
+      } else {
+        setCollapsed(false);
+      }
+    }
+
+    window.addEventListener("resize", handleWindowResize);
+    handleWindowResize(); // run once at mount
+
+    return () => window.removeEventListener("resize", handleWindowResize);
+  }, [sidebarOpen, setCollapsed]);
+
   const handleSignOut = async () => {
     await signOut();
     useUserStore.getState().signOut();
@@ -63,8 +78,12 @@ export default function Dashboard() {
   const year = "2025";
   const userId = user ? user._id.toString() : "";
 
+  // Query logs
   const dailyLogs = useQuery(api.dailyLogs.listDailyLogs, { userId, year });
 
+  // If dailyLogs not loaded, show spinner. 
+  // We STILL call the two hooks above unconditionally, 
+  // so there's no mismatch in hook order
   if (!dailyLogs) {
     return (
       <div className="flex h-full">
@@ -102,30 +121,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  /* 
-   * ========== Auto-collapse left sidebar if:
-   *  1) window.innerWidth < 1256
-   *  2) feed (right sidebar) is open
-   */
-  useEffect(() => {
-    function handleWindowResize() {
-      if (window.innerWidth < 1256 && sidebarOpen) {
-        // only collapse if feed is open
-        setCollapsed(true);
-      } else {
-        // otherwise, revert to uncollapsed if we want
-        // or you might do: if (!collapsed) setCollapsed(false);
-        // but let's just always revert if conditions aren't met
-        setCollapsed(false);
-      }
-    }
-
-    window.addEventListener("resize", handleWindowResize);
-    handleWindowResize(); // run once at mount
-
-    return () => window.removeEventListener("resize", handleWindowResize);
-  }, [sidebarOpen, setCollapsed]);
 
   return (
     <div className="flex h-full bg-white dark:bg-zinc-900">

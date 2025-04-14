@@ -10,7 +10,9 @@ import DraggableHeader from "./dashboard/_components/DraggableHeader";
 export default function LandingPage() {
   return (
     <div>
+      <div>
       <DraggableHeader />
+      </div>
         <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
           <Card className="w-full max-w-md shadow-lg">
             <CardHeader className="text-center">

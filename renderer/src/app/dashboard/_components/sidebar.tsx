@@ -1,4 +1,4 @@
-// SIDEBAR
+// LEFT SIDEBAR
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/sidebar.tsx
 
 "use client";
@@ -18,6 +18,7 @@ import {
   Sun,
   ArrowRightToLine,
   ArrowLeftFromLine,
+  PersonStanding,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,13 +33,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+import { useFeedStore } from "@/store/feedStore";
+
 interface SidebarProps {
   className?: string;
 }
 
 // Example actions
-const handleCreateNewLog = () => console.log("Trigger Create New Log action");
+const handleCreateNewLog = () => {
+  // Access feed store actions
+  const { setSidebarOpen, setSelectedDate, setActiveTab } = useFeedStore.getState();
+
+  // Build today's date key
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const dateKey = `${yyyy}-${mm}-${dd}`;
+
+  // Update the feed store
+  setSelectedDate(dateKey);  // Set the current day
+  setActiveTab("log");       // Ensure we're on the log tab
+  setSidebarOpen(true);      // Open the right sidebar
+};
+
 const handleGoToSettings = () => console.log("Trigger Settings action");
+const handleSoloist = () => {
+  console.log("Soloist action clicked");
+};
 
 export function Sidebar({ className }: SidebarProps) {
   const { theme, setTheme } = useTheme();
@@ -56,6 +78,7 @@ export function Sidebar({ className }: SidebarProps) {
 
   // Items that show only if expanded
   const mainActions = [
+    { id: "soloist", label: "Soloist", icon: PersonStanding, action: handleSoloist },
     { id: "new-log", label: "Create New Log", icon: Plus, action: handleCreateNewLog },
     { id: "settings", label: "Settings", icon: Settings, action: handleGoToSettings },
   ];
@@ -70,7 +93,7 @@ export function Sidebar({ className }: SidebarProps) {
       {/* SIDEBAR CONTAINER */}
       <div
         className={cn(
-          "flex flex-col justify-between h-full border-r border-zinc-300/30 bg-zinc-50/40 dark:border-zinc-700/30 dark:bg-zinc-950/40",
+          "flex flex-col justify-between h-full border-r border-zinc-300/30 bg-white dark:border-zinc-700/30 dark:bg-zinc-950/40",
           "backdrop-blur-xl overflow-hidden transition-[width] duration-300 ease-in-out",
           collapsed ? "w-13" : "w-64"
         )}

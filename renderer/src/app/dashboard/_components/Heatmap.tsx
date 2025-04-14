@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
 
+import { useFeedStore } from "@/store/feedStore";
+
 interface DailyLog {
   date: string;
   score?: number;
@@ -59,9 +61,7 @@ function getColorClass(score: number | null | undefined): string {
 }
 
 export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps) {
-  // Destructure both setSelectedDate and setSidebarOpen from feed store
-  // const { setSelectedDate, setSidebarOpen } = useFeedStore();
-  
+
   const logsMap = React.useMemo(() => {
     const map = new Map<string, DailyLog>();
     dailyLogs.forEach((log) => map.set(log.date, log));
@@ -102,10 +102,13 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
     [year]
   );
 
+  const { selectedDate, setSelectedDate } = useFeedStore();
+
   const handleDayClick = (dateKey: string) => {
     if (onSelectDate) {
       onSelectDate(dateKey);
     }
+    setSelectedDate(dateKey);
   };
 
   return (
@@ -159,37 +162,25 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
               const monthNumber = dateObj.getMonth() + 1;
 
               return (
-                <TooltipProvider key={dateKey}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        onClick={() => handleDayClick(dateKey)}
-                        className={`
-                          flex items-center justify-center
-                          w-6 h-6 rounded-sm cursor-pointer
-                          text-[10px] font-semibold transition-all duration-150
-                          ${getColorClass(score)}
-                          ${!shouldHighlight ? "opacity-30" : ""}
-                          ${isToday ? "ring-1 ring-zinc-600 dark:ring-zinc-300" : ""}
-                        `}
-                      >
-                        {score !== null && score >= 50 ? (
-                          <span className="text-zinc-900">{dayNumber}</span>
-                        ) : (
-                          <span className="text-zinc-100">{dayNumber}</span>
-                        )}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-zinc-800 border-zinc-700 text-zinc-200">
-                      <p>{`${monthNumber}/${dayNumber}/${year}`}</p>
-                      {score !== null ? (
-                        <p className="font-medium">Score: {score}</p>
-                      ) : (
-                        <p>No log yet</p>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div
+                  key={dateKey}
+                  onClick={() => handleDayClick(dateKey)}
+                  className={`
+                    flex items-center justify-center
+                    w-6 h-6 rounded-sm cursor-pointer
+                    text-[10px] font-semibold transition-all duration-150
+                    ${getColorClass(score)}
+                    ${!shouldHighlight ? "opacity-30" : ""}
+                    ${isToday ? "ring ring-red-600 dark:ring-zinc-300" : ""}
+                    ${selectedDate === dateKey ? "ring ring-blue-600" : ""}
+                  `}
+                >
+                  {score !== null && score >= 50 ? (
+                    <span className="text-zinc-900">{dayNumber}</span>
+                  ) : (
+                    <span className="text-zinc-100">{dayNumber}</span>
+                  )}
+                </div>
               );
             })}
           </div>

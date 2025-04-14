@@ -74,7 +74,7 @@ export default function Controls({
 
   // --- Existing Logic ---
   const handleYearNavChange = (direction: "prev" | "next") => {
-    const currentIndex = AVAILABLE_YEARS.indexOf(selectedYear); // Now AVAILABLE_YEARS is defined
+    const currentIndex = AVAILABLE_YEARS.indexOf(selectedYear); 
     if (direction === "prev" && currentIndex > 0) {
       onYearChange(AVAILABLE_YEARS[currentIndex - 1]);
     } else if (direction === "next" && currentIndex < AVAILABLE_YEARS.length - 1) {
@@ -114,7 +114,7 @@ export default function Controls({
             </div>
           </SelectTrigger>
           <SelectContent>
-            {AVAILABLE_YEARS.map(year => ( // Now this works
+            {AVAILABLE_YEARS.map(year => ( 
               <SelectItem key={year} value={year}>
                 {year}
               </SelectItem>
@@ -126,7 +126,7 @@ export default function Controls({
           variant="outline"
           size="icon"
           onClick={() => handleYearNavChange("next")}
-          disabled={AVAILABLE_YEARS.indexOf(selectedYear) === AVAILABLE_YEARS.length - 1} // Now this works
+          disabled={AVAILABLE_YEARS.indexOf(selectedYear) === AVAILABLE_YEARS.length - 1} 
           className="h-8 w-8"
         >
           <ChevronRight className="h-4 w-4" />
@@ -151,7 +151,7 @@ export default function Controls({
              <div className="space-y-1.5 py-1">
                <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2 px-1">Filter by score range:</div>
                <div className="grid grid-cols-2 gap-1.5">
-                 {legendItems.map((item) => ( // Uses legendItems defined above
+                 {legendItems.map((item) => ( 
                    <div key={item.label}
                      className={`flex items-center gap-1.5 text-xs rounded-sm px-2 py-1.5 cursor-pointer transition-colors ${selectedLegend === item.label ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : "hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50"}`}
                      onClick={() => onLegendFilterChange(selectedLegend === item.label ? null : item.label)}>

@@ -6,9 +6,9 @@ import DraggableHeader from "./_components/DraggableHeader";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-hidden">
       <div className="border-b border-zinc-200">
-      <DraggableHeader />
+        <DraggableHeader />
       </div>
       {/* Fill remaining space with the page content */}
       <div className="flex-1 overflow-hidden">

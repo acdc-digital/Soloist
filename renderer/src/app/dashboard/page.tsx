@@ -81,9 +81,6 @@ export default function Dashboard() {
   // Query logs
   const dailyLogs = useQuery(api.dailyLogs.listDailyLogs, { userId, year });
 
-  // If dailyLogs not loaded, show spinner. 
-  // We STILL call the two hooks above unconditionally, 
-  // so there's no mismatch in hook order
   if (!dailyLogs) {
     return (
       <div className="flex h-full">

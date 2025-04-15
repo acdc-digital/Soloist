@@ -1,6 +1,3 @@
-// DAILY LOG FORM
-// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/dailyLogForm.tsx
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -310,45 +307,45 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end space-x-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="daily-log-form"
-              disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : existingLog ? (
-                "Update Log"
-              ) : (
-                "Save Log"
-              )}
-            </Button>
-          </div>
         </form>
       </ScrollArea>
 
-      {/* Error or Footer Section */}
-      <div className="p-1 text-sm">
+      {/* Sticky Footer Buttons and Error Message */}
+      <div className="sticky bottom-0 w-full dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2">
         {error && (
-          <div className="flex items-center space-x-2 text-red-600">
+          <div className="flex items-center space-x-2 mb-2 text-red-600">
             <AlertCircle size={16} />
             <span>{error}</span>
           </div>
         )}
+        <div className="flex items-center space-x-2">
+        <Button
+            type="submit"
+            form="daily-log-form"
+            disabled={isSubmitting}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : existingLog ? (
+              "Update Log"
+            ) : (
+              "Save Log"
+            )}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm"
+          >
+            Cancel
+          </Button>
+        </div>
       </div>
     </div>
   );

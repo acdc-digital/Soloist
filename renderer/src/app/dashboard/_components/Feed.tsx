@@ -1,98 +1,89 @@
-// FEED
-// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/Feed.tsx
-
 "use client";
 
 import React, { useEffect } from "react";
 import { useUser } from "@/hooks/useUser";
-// Convex
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
 // Store
 import { useFeedStore, FeedMessage } from "@/store/feedStore";
 
-// Icons & UI
-import { Info, MessageSquare, Loader2 } from "lucide-react";
+// shadcn/ui & icons
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MessageSquare, Info, MessageSquareQuoteIcon } from "lucide-react";
 
 export default function Feed() {
   const { user } = useUser();
-
-  // Access feed state & actions
   const { feedMessages, setFeedMessages, loading, setLoading } = useFeedStore();
 
-  // If we have a user doc, get _id as a string, or undefined if not logged in
+  // If the user is logged in, user._id is a string. Otherwise, pass undefined.
   const userId = user ? user._id.toString() : undefined;
 
-  // Perform convex query for feed messages, pass userId or undefined
+  // Query feed messages from Convex
   const feedMessagesRaw = useQuery(api.feed.listFeedMessages, { userId });
 
-  // On each render or data change, update feed store
+  // Sync local store with feed query
   useEffect(() => {
-    // show loading spinner while feedMessagesRaw is undefined
     setLoading(feedMessagesRaw === undefined);
     if (feedMessagesRaw !== undefined) {
-      // sort messages newest first, then store them
+      // Sort messages newest-first
       const sorted = [...feedMessagesRaw].sort((a, b) => b.createdAt - a.createdAt);
       setFeedMessages(sorted);
     }
   }, [feedMessagesRaw, setFeedMessages, setLoading]);
 
-  // Format date
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+  // Format date and time
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
     });
-  };
 
-  // Format time
-  const formatTime = (timestamp: number): string => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("en-US", {
+  const formatTime = (timestamp: number) =>
+    new Date(timestamp).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
     });
-  };
 
-  // We'll display from the store:
   const messagesToShow = feedMessages || [];
 
   return (
-    <div className="h-full bg-zinc-900/95 border-l border-zinc-800 flex flex-col transition-all duration-200 ease-in-out">
-      {/* Header */}
-      <div className="p-5 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <h2 className="text-xl font-semibold text-zinc-50 flex items-center gap-2">
-          <MessageSquare size={18} className="text-zinc-400" />
-          Feed
-        </h2>
-        <p className="text-sm text-zinc-400 mt-1">
-          Your insights and observations
-        </p>
-      </div>
-
-      {/* Body: scrollable area */}
+    <div className="h-full bg-white flex flex-col transition-all duration-200 ease-in-out">
+      {/* Body: Scrollable */}
       <ScrollArea className="flex-1 h-full" type="hover">
         <div className="px-4 py-6">
-          {/* LOADING */}
+          {/* LOADING STATE */}
           {loading && (
-            <div className="flex flex-col items-center justify-center h-32 text-zinc-400">
-              <Loader2 size={24} className="animate-spin mb-2" />
-              <p className="text-sm">Loading your insights...</p>
+            <div className="flex flex-col gap-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-2 p-3 bg-gray-100 rounded border border-gray-200"
+                >
+                  <Skeleton className="h-4 w-1/4 bg-gray-200" />
+                  <Skeleton className="h-4 w-3/4 bg-gray-200" />
+                  <Skeleton className="h-4 w-2/3 bg-gray-200" />
+                </div>
+              ))}
             </div>
           )}
 
           {/* NO MESSAGES */}
           {!loading && messagesToShow.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-32 text-zinc-400 p-4 border border-dashed border-zinc-800 rounded-lg">
-              <Info size={24} className="mb-2 text-zinc-500" />
+            <div className="flex flex-col items-center justify-center h-32 text-gray-500 p-4 border border-gray-300 rounded-lg">
+              <Info size={24} className="mb-2 text-gray-400" />
               <p className="text-sm text-center">
                 No insights yet! Complete a daily log to get started.
               </p>
@@ -105,24 +96,24 @@ export default function Feed() {
               {messagesToShow.map((msg: FeedMessage) => (
                 <Card
                   key={msg._id}
-                  className="bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800/80 transition-colors duration-200"
+                  className="bg-white border border-gray-200 hover:bg-gray-50 transition-colors duration-200 shadow-sm"
                 >
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
+                  <CardHeader className="flex items-center justify-between pb-2">
+                    <CardTitle className="text-sm">
                       <Badge
                         variant="outline"
-                        className="text-xs font-normal text-zinc-300 border-zinc-700 px-2"
+                        className="text-xs font-normal text-gray-600 border-gray-300 px-2"
                       >
                         {formatDate(msg.date)}
                       </Badge>
-                      <span className="text-xs text-zinc-500">
-                        {formatTime(msg.createdAt)}
-                      </span>
-                    </div>
+                    </CardTitle>
+                    <CardDescription className="text-xs text-gray-400">
+                      {formatTime(msg.createdAt)}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                    <Separator className="mb-3 bg-zinc-700/50" />
-                    <p className="text-sm text-zinc-200 whitespace-pre-line leading-relaxed">
+                  <CardContent className="pt-0">
+                    <Separator className="mb-3 bg-gray-100" />
+                    <p className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">
                       {msg.message}
                     </p>
                   </CardContent>

@@ -74,12 +74,12 @@ export default function Dashboard() {
     useUserStore.getState().signOut();
   };
 
-  // Example year
-  const year = "2025";
+  // Year Selection
+  const [selectedYear, setSelectedYear] = React.useState("2025");
   const userId = user ? user._id.toString() : "";
 
   // Query logs
-  const dailyLogs = useQuery(api.dailyLogs.listDailyLogs, { userId, year });
+  const dailyLogs = useQuery(api.dailyLogs.listDailyLogs, { userId, year: selectedYear });
 
   if (!dailyLogs) {
     return (
@@ -119,6 +119,10 @@ export default function Dashboard() {
     );
   }
 
+  function handleYearChange(newYear: string) {
+    setSelectedYear(newYear);
+  }
+
   return (
     <div className="flex h-full bg-white dark:bg-zinc-900">
       {/* Left sidebar */}
@@ -126,13 +130,19 @@ export default function Dashboard() {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col relative">
-        <div className="sticky top-0 z-10 px-2 mt-2 mb-2">
-          <Controls />
+        <div className="sticky top-0 z-10 px-4 mt-2 mb-2">
+          <Controls
+          selectedYear={selectedYear}
+          onYearChange={handleYearChange}
+          // Pass Legend Props (TODO)
+          // selectedLegend={selectedLegend}
+          // onLegendFilterChange={(legend) => setSelectedLegend(legend)}
+          />
         </div>
         <div className="flex-1 overflow-auto px-3 pb-2">
           <Heatmap
             dailyLogs={dailyLogs}
-            year={year}
+            year={selectedYear}
             onSelectDate={handleSelectDate}
           />
         </div>

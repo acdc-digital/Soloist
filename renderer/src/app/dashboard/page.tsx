@@ -16,7 +16,7 @@ import { useSidebarStore } from "@/store/sidebarStore";
 import { useFeedStore } from "@/store/feedStore";
 
 // Components
-import Sidebar from "./_components/sidebar";
+import { Sidebar } from "./_components/sidebar";
 import Heatmap from "./_components/Heatmap";
 import Controls from "./_components/Controls";
 import DailyLogForm from "./_components/dailyLogForm";

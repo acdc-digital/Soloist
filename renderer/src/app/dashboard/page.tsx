@@ -23,12 +23,11 @@ import DailyLogForm from "./_components/dailyLogForm";
 import Feed from "./_components/Feed";
 import { RightSidebar } from "./_components/RightSidebar";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const { user } = useUser();
   const setStoreUser = useUserStore((state) => state.setUser);
-  const { collapsed, setCollapsed } = useSidebarStore();
+  const { setCollapsed } = useSidebarStore();
 
   // Our feed store: if 'sidebarOpen' is true, the feed is open
   const {

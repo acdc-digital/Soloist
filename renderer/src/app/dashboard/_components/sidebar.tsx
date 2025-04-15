@@ -35,9 +35,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Import our new SettingsDialog component
+// Import Stores & Modals
 import { SettingsDialog } from "@/app/settings/SettingsDialog";
-
 import { useFeedStore } from "@/store/feedStore";
 
 interface SidebarProps {
@@ -59,14 +58,30 @@ export function Sidebar({ className }: SidebarProps) {
   };
 
   const handleCreateNewLog = () => {
-    const { setSidebarOpen, setSelectedDate, setActiveTab } = useFeedStore.getState();
+    const {
+      sidebarOpen,
+      activeTab,
+      resetFeed,
+      setSidebarOpen,
+      setSelectedDate,
+      setActiveTab,
+    } = useFeedStore.getState();
 
+    // If it's already open on "log", close it
+    if (sidebarOpen && activeTab === "log") {
+      setSidebarOpen(false);
+      resetFeed(); // optional if you want to clear the feed on close
+      return;
+    }
+
+    // Otherwise, open and reset the "log" tab
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
     const dateKey = `${yyyy}-${mm}-${dd}`;
 
+    resetFeed();
     setSelectedDate(dateKey);
     setActiveTab("log");
     setSidebarOpen(true);
@@ -74,6 +89,10 @@ export function Sidebar({ className }: SidebarProps) {
 
   const handleSoloist = () => {
     console.log("Soloist action clicked");
+  };
+
+  const handleGoTohelp = () => {
+    console.log("Help action clicked");
   };
 
   const handleSignOut = () => {
@@ -86,7 +105,7 @@ export function Sidebar({ className }: SidebarProps) {
     { id: "soloist",  label: "Soloist",        icon: PersonStanding,  action: handleSoloist },
     { id: "new-log",  label: "Create New Log", icon: Plus,            action: handleCreateNewLog },
     { id: "settings", label: "Settings",       icon: Settings,        action: handleGoToSettings },
-    { id: "help",     label: "Help",           icon: CircleHelpIcon,  action: handleGoToSettings },
+    { id: "help",     label: "Help",           icon: CircleHelpIcon,  action: handleGoTohelp },
   ];
 
   return (

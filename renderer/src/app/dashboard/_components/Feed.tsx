@@ -1,3 +1,6 @@
+// FEED
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/Feed.tsx
+
 "use client";
 
 import React, { useEffect } from "react";

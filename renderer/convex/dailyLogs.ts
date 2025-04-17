@@ -10,18 +10,16 @@ import { v } from "convex/values";
  * We assume `date` is stored as "YYYY-MM-DD" strings.
  */
 export const listDailyLogs = query({
-  args: {
-    userId: v.string(),
-    year: v.string(),
-  },
+  args: { userId: v.string(), year: v.string() },
   handler: async ({ db }, { userId, year }) => {
-    // userId is the string from user._id.id
-    const logs = await db
+    const start = `${year}-01-01`;
+    const end   = `${year}-12-31`;
+    return await db
       .query("logs")
-      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter(q => q.eq(q.field("userId"), userId))
+      .filter(q => q.gte(q.field("date"), start))
+      .filter(q => q.lte(q.field("date"), end))
       .collect();
-
-    return logs.filter((log) => log.date.startsWith(year + "-"));
   },
 });
 

@@ -1,6 +1,3 @@
-// SCORE 
-// /Users/matthewsimon/Documents/Github/solo-heatMaps/soloist/convex/score.ts
-
 import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -32,49 +29,22 @@ export const scoreDailyLog = action({
     // 2) Build your system prompt for the LLM
     const systemPrompt = `
       You are Solomon, an empathetic AI that evaluates a person's daily logs.
-      Your task is to assess their psychological state and assign a score from 0 to 100.
+      Your task is to assess their overall day and assign a score from 0 to 100.
       
-      The score translates to one of six color categories, each representing a psychological state:
+      The score maps to one of ten color categories:
       
-      1. DEEP RED (0-16): Severe distress or crisis
-         - Overwhelming negative emotions
-         - Possible harmful thoughts
-         - Inability to function in daily activities
-         - Complete lack of motivation or joy
+      1. INDIGO (90-100): Exceptional day with strong positive emotions, high energy, and significant achievements.
+      2. BLUE (80-89): Very good day, predominantly positive experiences and successful coping.
+      3. SKY (70-79): Good day, more positive than negative, manageable challenges.
+      4. TEAL (60-69): Fairly positive, some moderate challenges with adequate coping.
+      5. GREEN (50-59): Balanced day, mix of ups and downs but generally steady.
+      6. LIME (40-49): Slightly below average, more challenges than successes.
+      7. YELLOW (30-39): Difficult day with noticeable setbacks and stress.
+      8. AMBER (20-29): Very challenging day with significant negative emotions.
+      9. ORANGE (10-19): Extremely tough day, overwhelming stress or sadness.
+      10. ROSE (0-9): Crisis level, severe distress and inability to function.
       
-      2. RED (17-33): Significant struggle
-         - Pronounced negative emotions (anxiety, sadness, stress)
-         - Multiple difficult challenges without resolution
-         - Low energy and motivation
-         - Few to no positive experiences
-      
-      3. ORANGE (34-50): Challenging day with some difficulties
-         - Mixed emotions leaning negative
-         - Notable obstacles or setbacks
-         - Some coping abilities present but strained
-         - Limited positive moments
-      
-      4. YELLOW (51-67): Balanced day with ups and downs
-         - Equal mix of positive and negative experiences
-         - Manageable challenges
-         - Moderate energy and motivation
-         - Some meaningful moments
-      
-      5. GREEN (68-84): Generally positive day
-         - Predominantly positive emotions and experiences
-         - Successfully navigated challenges
-         - Good energy levels and productive actions
-         - Meaningful connections or accomplishments
-      
-      6. DEEP GREEN (85-100): Exceptional day
-         - Strong positive emotions (joy, gratitude, fulfillment)
-         - Significant achievements or breakthroughs
-         - High energy and motivation
-         - Deep connection with others or meaningful experiences
-         - Personal growth or goal advancement
-      
-      Based on the detailed analysis of the user's daily log, determine the appropriate score.
-      Respond with ONLY the integer score (0-100), no additional text.
+      Based solely on the content of the user's daily log JSON, respond with the integer score (0–100) only, without any additional text.
     `.trim();
 
     // JSONify the daily log's answers

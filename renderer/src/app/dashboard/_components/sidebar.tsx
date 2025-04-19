@@ -5,8 +5,6 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-// The following import is no longer needed if we removed the theme toggle
-// import { useTheme } from "next-themes";
 
 import { useUserStore } from "@/store/userStore";
 import { useSidebarStore } from "@/store/sidebarStore";
@@ -47,7 +45,14 @@ export function Sidebar({ className }: SidebarProps) {
   const user = useUserStore((state) => state.user);
   const signOut = useUserStore((state) => state.signOut);
 
-  const { collapsed, toggleCollapsed, searchQuery, setSearchQuery } = useSidebarStore();
+  const { 
+    collapsed, 
+    toggleCollapsed, 
+    searchQuery, 
+    setSearchQuery,
+    currentView,
+    setView
+  } = useSidebarStore();
 
   // State to control the SettingsDialog
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
@@ -66,6 +71,9 @@ export function Sidebar({ className }: SidebarProps) {
       setSelectedDate,
       setActiveTab,
     } = useFeedStore.getState();
+
+    // Set view to dashboard when creating a new log
+    setView("dashboard");
 
     // If it's already open on "log", close it
     if (sidebarOpen && activeTab === "log") {
@@ -88,6 +96,13 @@ export function Sidebar({ className }: SidebarProps) {
   };
 
   const handleSoloist = () => {
+    // Switch to Soloist view
+    setView("soloist");
+    
+    // Close the right sidebar if it's open
+    const { setSidebarOpen } = useFeedStore.getState();
+    setSidebarOpen(false);
+    
     console.log("Soloist action clicked");
   };
 
@@ -102,8 +117,8 @@ export function Sidebar({ className }: SidebarProps) {
 
   // Items that show only if expanded
   const mainActions = [
-    { id: "soloist",  label: "Soloist",        icon: PersonStanding,  action: handleSoloist },
-    { id: "new-log",  label: "Create New Log", icon: Plus,            action: handleCreateNewLog },
+    { id: "soloist",  label: "Soloist",        icon: PersonStanding,  action: handleSoloist, active: currentView === "soloist" },
+    { id: "new-log",  label: "Create New Log", icon: Plus,            action: handleCreateNewLog, active: currentView === "dashboard" },
     { id: "settings", label: "Settings",       icon: Settings,        action: handleGoToSettings },
     { id: "help",     label: "Help",           icon: CircleHelpIcon,  action: handleGoTohelp },
   ];
@@ -167,7 +182,10 @@ export function Sidebar({ className }: SidebarProps) {
                     key={item.id}
                     variant="ghost"
                     onClick={item.action}
-                    className="w-full h-9 justify-start px-3 text-sm font-normal hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 rounded-lg mb-1"
+                    className={cn(
+                      "w-full h-9 justify-start px-3 text-sm font-normal hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 rounded-lg mb-1",
+                      item.active && "bg-zinc-200/80 dark:bg-zinc-800/80"
+                    )}
                   >
                     <item.icon className="mr-3 h-4 w-4 text-zinc-600 dark:text-zinc-400 flex-shrink-0" />
                     {item.label}
@@ -180,9 +198,7 @@ export function Sidebar({ className }: SidebarProps) {
 
         {/* BOTTOM SECTION */}
         <div className="relative p-2">
-          {/* This used to show the dark mode toggle. Now removed. */}
-
-          {/* ACCOUNT DROPDOWN (unchanged) */}
+          {/* ACCOUNT DROPDOWN */}
           {!collapsed && (
             <>
               <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40 -mx-2 mt-3" />

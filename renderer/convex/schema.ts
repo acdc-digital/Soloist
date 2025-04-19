@@ -5,16 +5,10 @@ import { v } from "convex/values";
 const schema = defineSchema({
   ...authTables,
   logs: defineTable({
-    // The user who created the log
     userId: v.string(),
-    // A unique date identifier for the daily log (could be formatted as YYYY-MM-DD)
     date: v.string(),
-    // Store answers as an object.
-    // You could be more specific if you have fixed questions.
     answers: v.any(),
-    // A computed daily score, e.g. 0-100.
     score: v.optional(v.number()),
-    // Timestamps to track log creation and updates.
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -26,6 +20,17 @@ const schema = defineSchema({
     message: v.string(),
     createdAt: v.number(),
   }),
+
+  forecast: defineTable({
+    userId: v.string(),
+    date: v.string(),
+    emotionScore: v.number(),
+    trend: v.string(),
+    description: v.string(),
+    recommendation: v.string(),
+    createdAt: v.number(),
+  })
+    .index("byUserDate", ["userId", "date"]),
 
   // other tables...
 });

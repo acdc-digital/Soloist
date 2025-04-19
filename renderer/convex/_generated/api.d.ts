@@ -16,6 +16,7 @@ import type {
 import type * as auth from "../auth.js";
 import type * as dailyLogs from "../dailyLogs.js";
 import type * as feed from "../feed.js";
+import type * as forecast from "../forecast.js";
 import type * as http from "../http.js";
 import type * as score from "../score.js";
 
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   dailyLogs: typeof dailyLogs;
   feed: typeof feed;
+  forecast: typeof forecast;
   http: typeof http;
   score: typeof score;
 }>;

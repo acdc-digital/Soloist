@@ -22,12 +22,13 @@ import Controls from "./_components/Controls";
 import DailyLogForm from "./_components/dailyLogForm";
 import Feed from "./_components/Feed";
 import { RightSidebar } from "./_components/RightSidebar";
+import SoloistPage from "./soloist/page";
 import { Loader2 } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useUser();
   const setStoreUser = useUserStore((state) => state.setUser);
-  const { setCollapsed } = useSidebarStore();
+  const { setCollapsed, currentView } = useSidebarStore();
 
   // Our feed store: if 'sidebarOpen' is true, the feed is open
   const {
@@ -77,10 +78,15 @@ export default function Dashboard() {
   const [selectedYear, setSelectedYear] = React.useState("2025");
   const userId = user ? user._id.toString() : "";
 
-  // Query logs
-  const dailyLogs = useQuery(api.dailyLogs.listDailyLogs, { userId, year: selectedYear });
+  // Query logs (only needed for dashboard view)
+  const dailyLogs = useQuery(
+    api.dailyLogs.listDailyLogs, 
+    { userId, year: selectedYear },
+    { enabled: currentView === "dashboard" } // Only query when in dashboard view
+  );
 
-  if (!dailyLogs) {
+  // If we're in dashboard view and data is loading
+  if (currentView === "dashboard" && !dailyLogs) {
     return (
       <div className="flex h-full">
         <Sidebar />
@@ -127,55 +133,61 @@ export default function Dashboard() {
       {/* Left sidebar */}
       <Sidebar />
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col relative">
-        <div className="sticky top-0 z-10 px-4 mt-2 mb-2">
-          <Controls
-          selectedYear={selectedYear}
-          onYearChange={handleYearChange}
-          // Pass Legend Props (TODO)
-          // selectedLegend={selectedLegend}
-          // onLegendFilterChange={(legend) => setSelectedLegend(legend)}
-          />
-        </div>
-        <div className="flex-1 overflow-auto px-3 pb-2">
-          <Heatmap
-            dailyLogs={dailyLogs}
-            year={selectedYear}
-            onSelectDate={handleSelectDate}
-          />
-        </div>
-      </main>
-
-      {/* Right sidebar */}
-      <RightSidebar
-        open={sidebarOpen}
-        onClose={() => {
-          toggleSidebar();
-          setSelectedDate(null);
-        }}
-        title={renderLogTitle()}
-      >
-        {activeTab === "log" ? (
-          selectedDate ? (
-            <DailyLogForm
-              onClose={() => {
-                toggleSidebar();
-                setSelectedDate(null);
-              }}
-              date={selectedDate}
-            />
-          ) : (
-            <div className="p-4 text-sm text-zinc-500">
-              Click a day on the calendar to open the log form.
+      {/* Main content - conditionally render based on current view */}
+      {currentView === "dashboard" ? (
+        <>
+          <main className="flex-1 flex flex-col relative">
+            <div className="sticky top-0 z-10 px-4 mt-2 mb-2">
+              <Controls
+                selectedYear={selectedYear}
+                onYearChange={handleYearChange}
+              />
             </div>
-          )
-        ) : activeTab === "feed" ? (
-          <Feed userId={userId} />
-        ) : (
-          <div className="p-4 text-sm text-zinc-500">No content.</div>
-        )}
-      </RightSidebar>
+            <div className="flex-1 overflow-auto px-3 pb-2">
+              <Heatmap
+                dailyLogs={dailyLogs}
+                year={selectedYear}
+                onSelectDate={handleSelectDate}
+              />
+            </div>
+          </main>
+
+          {/* Right sidebar for dashboard view */}
+          <RightSidebar
+            open={sidebarOpen}
+            onClose={() => {
+              toggleSidebar();
+              setSelectedDate(null);
+            }}
+            title={renderLogTitle()}
+          >
+            {activeTab === "log" ? (
+              selectedDate ? (
+                <DailyLogForm
+                  onClose={() => {
+                    toggleSidebar();
+                    setSelectedDate(null);
+                  }}
+                  date={selectedDate}
+                />
+              ) : (
+                <div className="p-4 text-sm text-zinc-500">
+                  Click a day on the calendar to open the log form.
+                </div>
+              )
+            ) : activeTab === "feed" ? (
+              <Feed userId={userId} />
+            ) : (
+              <div className="p-4 text-sm text-zinc-500">No content.</div>
+            )}
+          </RightSidebar>
+        </>
+      ) : (
+        // Soloist view
+        <main className="flex-1 overflow-hidden">
+          <SoloistPage />
+        </main>
+      )}
     </div>
   );
 }

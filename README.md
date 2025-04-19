@@ -19,8 +19,6 @@ Solo (Solomon Powered) heatMaps is a unique daily log. Users input a variety of 
 1. git add .
 2. git commit -m "Updated Soloist"
 3. git push origin main
-4. (optional) Gloabl Electron Binary Package.json script:   
-"dev": "tsc && /Users/matthewsimon/.npm/_npx/84a0d8276a8be930/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron .",
 
 **development instructions:**   
 4. git checkout -b *new-branch*   

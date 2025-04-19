@@ -141,7 +141,7 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
 
       <div className="flex-1 overflow-auto">
         <ScrollArea className="w-full h-full">
-          <div className="flex flex-wrap gap-1 p-1">
+          <div className="flex flex-wrap gap-0.75 p-1">
             {allDates.map((dateObj) => {
               const dateKey = buildDateKey(dateObj);
               const dayLog = logsMap.get(dateKey);

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsc && electron .",
+    "dev": "tsc && /Users/matthewsimon/.npm/_npx/84a0d8276a8be930/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron .",
     "build": "tsc && electron-builder"
   },
   "devDependencies": {

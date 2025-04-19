@@ -3,129 +3,153 @@
 
 "use client";
 
-import React, { useEffect } from "react";
-import { useUser } from "@/hooks/useUser";
-import { useQuery } from "convex/react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-
-// Store
-import { useFeedStore, FeedMessage } from "@/store/feedStore";
-
-// shadcn/ui & icons
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Info, MessageSquareQuoteIcon } from "lucide-react";
+import { useFeedStore } from "@/store/feedStore";
+import { useUserStore } from "@/store/userStore";
+import { formatDistanceToNow } from "date-fns";
+import { Loader2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Feed() {
-  const { user } = useUser();
-  const { feedMessages, setFeedMessages, loading, setLoading } = useFeedStore();
-
-  // If the user is logged in, user._id is a string. Otherwise, pass undefined.
-  const userId = user ? user._id.toString() : undefined;
-
-  // Query feed messages from Convex
-  const feedMessagesRaw = useQuery(api.feed.listFeedMessages, { userId });
-
-  // Sync local store with feed query
+  const { selectedDate, setFeedMessages, activeTab, feedMessages, loading, setLoading } = useFeedStore();
+  const { user } = useUserStore();
+  const userId = user?.id || "";
+  
+  // Fetch feed messages for the user
+  const feedMessagesData = useQuery(api.feed.listFeedMessages, { userId });
+  
+  // Generate feed message mutation
+  const generateFeed = useMutation(api.feed.generateFeedForDailyLog);
+  
+  // Update feed state when data changes
   useEffect(() => {
-    setLoading(feedMessagesRaw === undefined);
-    if (feedMessagesRaw !== undefined) {
-      // Sort messages newest-first
-      const sorted = [...feedMessagesRaw].sort((a, b) => b.createdAt - a.createdAt);
-      setFeedMessages(sorted);
+    if (feedMessagesData) {
+      setFeedMessages(feedMessagesData);
     }
-  }, [feedMessagesRaw, setFeedMessages, setLoading]);
+  }, [feedMessagesData, setFeedMessages]);
 
-  // Format date and time
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  // Filter messages for selected date
+  const filteredMessages = selectedDate && feedMessages
+    ? feedMessages.filter(msg => msg.date === selectedDate)
+    : [];
 
-  const formatTime = (timestamp: number) =>
-    new Date(timestamp).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+  const handleGenerateFeed = async () => {
+    if (!selectedDate || !userId) return;
+    
+    setLoading(true);
+    try {
+      await generateFeed({ userId, date: selectedDate });
+      // Feedback will be automatically updated via the useQuery hook
+    } catch (error) {
+      console.error("Error generating feed:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const messagesToShow = feedMessages || [];
+  if (!selectedDate) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center text-zinc-500">
+        <div className="mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mx-auto mb-2"
+          >
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+          </svg>
+          <p className="text-lg font-medium">Select a date</p>
+        </div>
+        <p>Click on a day in the calendar to view insights.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full bg-white flex flex-col transition-all duration-200 ease-in-out">
-      {/* Body: Scrollable */}
-      <ScrollArea className="flex-1 h-full" type="hover">
-        <div className="px-4 py-6">
-          {/* LOADING STATE */}
-          {loading && (
-            <div className="flex flex-col gap-3">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col gap-2 p-3 bg-gray-100 rounded border border-gray-200"
-                >
-                  <Skeleton className="h-4 w-1/4 bg-gray-200" />
-                  <Skeleton className="h-4 w-3/4 bg-gray-200" />
-                  <Skeleton className="h-4 w-2/3 bg-gray-200" />
-                </div>
-              ))}
-            </div>
-          )}
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold">
+          {activeTab === "feed" ? "Solomon's Insights" : "Daily Log"}
+          <span className="ml-2 text-sm font-normal text-muted-foreground">
+            {selectedDate}
+          </span>
+        </h2>
+      </div>
 
-          {/* NO MESSAGES */}
-          {!loading && messagesToShow.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-32 text-gray-500 p-4 border border-gray-300 rounded-lg">
-              <Info size={24} className="mb-2 text-gray-400" />
-              <p className="text-sm text-center">
-                No insights yet! Complete a daily log to get started.
-              </p>
-            </div>
-          )}
-
-          {/* SHOW MESSAGES */}
-          {messagesToShow.length > 0 && (
-            <div className="space-y-4 pb-2">
-              {messagesToShow.map((msg: FeedMessage) => (
-                <Card
-                  key={msg._id}
-                  className="bg-white border border-gray-200 hover:bg-gray-50 transition-colors duration-200 shadow-sm"
+      <div className="flex-1 overflow-y-auto p-4">
+        {filteredMessages.length > 0 ? (
+          <div className="space-y-4">
+            {filteredMessages.map((message) => (
+              <Card key={message._id} className="bg-card/50">
+                <CardContent className="pt-4">
+                  <div className="prose prose-zinc dark:prose-invert max-w-none">
+                    <p>{message.message}</p>
+                  </div>
+                  <div className="mt-4 text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="mb-4">
+              <div className="rounded-full bg-muted p-3 w-12 h-12 flex items-center justify-center mx-auto">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-muted-foreground"
                 >
-                  <CardHeader className="flex items-center justify-between pb-2">
-                    <CardTitle className="text-sm">
-                      <Badge
-                        variant="outline"
-                        className="text-xs font-normal text-gray-600 border-gray-300 px-2"
-                      >
-                        {formatDate(msg.date)}
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription className="text-xs text-gray-400">
-                      {formatTime(msg.createdAt)}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <Separator className="mb-3 bg-gray-100" />
-                    <p className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">
-                      {msg.message}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                </svg>
+              </div>
+              <h3 className="mt-4 text-lg font-medium">No insights yet</h3>
             </div>
-          )}
-        </div>
-      </ScrollArea>
+            <p className="mb-4 text-muted-foreground">
+              Generate AI insights from your daily log.
+            </p>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleGenerateFeed}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Generate Insights
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

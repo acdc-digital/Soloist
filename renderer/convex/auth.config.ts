@@ -1,3 +1,6 @@
+// CONVEX AUTH CONFIG
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/convex/auth.config.ts
+
 export default {
   providers: [
     {

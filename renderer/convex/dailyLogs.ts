@@ -84,3 +84,16 @@ export const dailyLog = mutation({
     }
   },
 });
+
+// Helper query to get log count for a user
+export const getLogCount = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const logs = await ctx.db
+      .query("logs")
+      .withIndex("byUserId", (q) => q.eq("userId", args.userId))
+      .collect();
+    
+    return logs.length;
+  },
+});

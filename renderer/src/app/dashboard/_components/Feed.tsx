@@ -7,20 +7,26 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useFeedStore } from "@/store/feedStore";
-import { useUserStore } from "@/store/userStore";
+import { useUser } from "@/hooks/useUser";
+import { getUserId } from "@/utils/userUtils"; // Import the utility
 import { formatDistanceToNow } from "date-fns";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function Feed() {
   const { selectedDate, setFeedMessages, activeTab, feedMessages, loading, setLoading } = useFeedStore();
-  const { user } = useUserStore();
-  const userId = user?._id ?? "";
+  
+  // Get user and extract ID using utility
+  const { user } = useUser();
+  const userId = getUserId(user);
   
   // Fetch feed messages for the user
-  const feedMessagesData = useQuery(api.feed.listFeedMessages, { userId });
+  const feedMessagesData = useQuery(
+    api.feed.listFeedMessages, 
+    { userId },
+    { enabled: !!userId } // Only run query if userId exists
+  );
   
   // Generate feed message mutation
   const generateFeed = useMutation(api.feed.generateFeedForDailyLog);
@@ -133,7 +139,7 @@ export default function Feed() {
               variant="default"
               size="sm"
               onClick={handleGenerateFeed}
-              disabled={loading}
+              disabled={loading || !userId}
             >
               {loading ? (
                 <>

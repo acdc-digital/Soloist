@@ -14,6 +14,7 @@ import { useUser } from "@/hooks/useUser";
 import { useUserStore } from "@/store/userStore";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useFeedStore } from "@/store/feedStore";
+import { getUserId } from "@/utils/userUtils"; // Import the utility
 
 // Components
 import { Sidebar } from "./_components/sidebar";
@@ -41,11 +42,11 @@ export default function Dashboard() {
     setSidebarOpen,
   } = useFeedStore();
 
-  // First effect: keep user store in sync
+  // Keep user store in sync - this looks good already
   useEffect(() => {
     if (user) {
       setStoreUser({
-        id: user.id || "",
+        id: user._id ? user._id.toString() : "",
         name: user.name || "",
         email: user.email || "",
         profilePicture: user.imageUrl,
@@ -76,13 +77,15 @@ export default function Dashboard() {
 
   // Year Selection
   const [selectedYear, setSelectedYear] = React.useState("2025");
-  const userId = user ? user._id.toString() : "";
+  
+  // Use getUserId utility instead of direct access
+  const userId = getUserId(user);
 
   // Query logs (only needed for dashboard view)
   const dailyLogs = useQuery(
     api.dailyLogs.listDailyLogs, 
     { userId, year: selectedYear },
-    { enabled: currentView === "dashboard" } // Only query when in dashboard view
+    { enabled: currentView === "dashboard" && !!userId } // Only query when in dashboard view and userId exists
   );
 
   // If we're in dashboard view and data is loading
@@ -176,7 +179,7 @@ export default function Dashboard() {
                 </div>
               )
             ) : activeTab === "feed" ? (
-              <Feed userId={userId} />
+              <Feed />
             ) : (
               <div className="p-4 text-sm text-zinc-500">No content.</div>
             )}

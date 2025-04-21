@@ -1,4 +1,4 @@
-// ZUSTAND PARENT STORE
+// ZUSTAND USER STORE
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/store/userStore.ts
 
 import { create } from 'zustand'

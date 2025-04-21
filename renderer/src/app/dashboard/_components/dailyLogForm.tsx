@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useUser } from "@/hooks/useUser";
+import { getUserId } from "@/utils/userUtils"; // Add the utility
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,8 @@ interface DailyLogFormProps {
 
 export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   const { user } = useUser();
-  const userId = user?._id ?? "";
+  // Keep your original direct access but add a fallback to the utility
+  const userId = user?._id?.toString() || getUserId(user);
 
   const effectiveDate = date ?? new Date().toISOString().split("T")[0];
 

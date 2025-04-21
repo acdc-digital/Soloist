@@ -1,3 +1,6 @@
+// CONVEX AUTH PROVIDER
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/provider/ConvexClientProvider.tsx
+
 "use client";
  
 import { ConvexAuthNextjsProvider } from "@convex-dev/auth/nextjs";

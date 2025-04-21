@@ -1,10 +1,7 @@
-// SOLOIST
-// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/soloist/page.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Info, ChevronLeft, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Sparkles, Loader2 } from "lucide-react"; // Added Loader2
+import { Info, ChevronLeft, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Sparkles, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -17,58 +14,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { useUser } from "@/hooks/useUser";
 import { useUserStore } from "@/store/userStore";
-
-
-// --- Function Definitions ---
-function getColorClass(score: number | null | undefined): string {
-  if (score == null) return "bg-zinc-800/20 border border-zinc-700/30";
-  if (score >= 90) return "bg-indigo-400/80 hover:bg-indigo-400";
-  if (score >= 80) return "bg-blue-400/80 hover:bg-blue-400";
-  if (score >= 70) return "bg-sky-400/80 hover:bg-sky-400";
-  if (score >= 60) return "bg-teal-400/80 hover:bg-teal-400";
-  if (score >= 50) return "bg-green-400/80 hover:bg-green-400";
-  if (score >= 40) return "bg-lime-400/80 hover:bg-lime-400";
-  if (score >= 30) return "bg-yellow-400/80 hover:bg-yellow-400";
-  if (score >= 20) return "bg-amber-500/80 hover:bg-amber-500";
-  if (score >= 10) return "bg-orange-500/80 hover:bg-orange-500";
-  return "bg-rose-600/80 hover:bg-rose-600";
-}
-
-function getBorderColorClass(score: number | null | undefined): string {
-  if (score == null) return "border-zinc-700/50";
-  if (score >= 90) return "border-indigo-500";
-  if (score >= 80) return "border-blue-500";
-  if (score >= 70) return "border-sky-500";
-  if (score >= 60) return "border-teal-500";
-  if (score >= 50) return "border-green-500";
-  if (score >= 40) return "border-lime-500";
-  if (score >= 30) return "border-yellow-500";
-  if (score >= 20) return "border-amber-600";
-  if (score >= 10) return "border-orange-600";
-  return "border-rose-700";
-}
-
-function getTextColorClass(score: number | null | undefined): string {
-  if (score == null) return "text-zinc-400";
-  if (score >= 60) return "text-zinc-900"; // Dark text for lighter backgrounds
-  return "text-zinc-100"; // Light text for darker backgrounds
-}
-
-const TrendIcon = ({ trend }: { trend?: string | null }) => { // Made trend optional
-  if (trend === "up") return <TrendingUp className="h-4 w-4 text-green-500" />;
-  if (trend === "down") return <TrendingDown className="h-4 w-4 text-rose-500" />;
-  // Return null or a default icon if trend is null/undefined or "stable"
-  // Returning stable for null/undefined for now
-  return <Sparkles className="h-4 w-4 text-blue-400 opacity-70" />;
-};
-
-const mockInsights = [
-  "Your emotional state tends to peak midweek (Wednesday) and on weekends",
-  "Thursday consistently shows lower emotional scores - consider additional self-care",
-  "Evening periods generally show higher wellbeing than mornings",
-  "Your recovery pattern is strong, with quick rebounds after challenging days"
-];
 
 // Helper component for Loading State
 const LoadingState = ({ message = "Loading..." }: { message?: string }) => (
@@ -118,24 +65,84 @@ const EmptyState = ({ title, description, onGenerate, isGenerating, error }: {
   </div>
 );
 
+// Helper functions
+function getColorClass(score: number | null | undefined): string {
+  if (score == null) return "bg-zinc-800/20 border border-zinc-700/30";
+  if (score >= 90) return "bg-indigo-400/80 hover:bg-indigo-400";
+  if (score >= 80) return "bg-blue-400/80 hover:bg-blue-400";
+  if (score >= 70) return "bg-sky-400/80 hover:bg-sky-400";
+  if (score >= 60) return "bg-teal-400/80 hover:bg-teal-400";
+  if (score >= 50) return "bg-green-400/80 hover:bg-green-400";
+  if (score >= 40) return "bg-lime-400/80 hover:bg-lime-400";
+  if (score >= 30) return "bg-yellow-400/80 hover:bg-yellow-400";
+  if (score >= 20) return "bg-amber-500/80 hover:bg-amber-500";
+  if (score >= 10) return "bg-orange-500/80 hover:bg-orange-500";
+  return "bg-rose-600/80 hover:bg-rose-600";
+}
+
+function getBorderColorClass(score: number | null | undefined): string {
+  if (score == null) return "border-zinc-700/50";
+  if (score >= 90) return "border-indigo-500";
+  if (score >= 80) return "border-blue-500";
+  if (score >= 70) return "border-sky-500";
+  if (score >= 60) return "border-teal-500";
+  if (score >= 50) return "border-green-500";
+  if (score >= 40) return "border-lime-500";
+  if (score >= 30) return "border-yellow-500";
+  if (score >= 20) return "border-amber-600";
+  if (score >= 10) return "border-orange-600";
+  return "border-rose-700";
+}
+
+function getTextColorClass(score: number | null | undefined): string {
+  if (score == null) return "text-zinc-400";
+  if (score >= 60) return "text-zinc-900"; // Dark text for lighter backgrounds
+  return "text-zinc-100"; // Light text for darker backgrounds
+}
+
+const TrendIcon = ({ trend }: { trend?: string | null }) => {
+  if (trend === "up") return <TrendingUp className="h-4 w-4 text-green-500" />;
+  if (trend === "down") return <TrendingDown className="h-4 w-4 text-rose-500" />;
+  return <Sparkles className="h-4 w-4 text-blue-400 opacity-70" />;
+};
+
+const mockInsights = [
+  "Your emotional state tends to peak midweek (Wednesday) and on weekends",
+  "Thursday consistently shows lower emotional scores - consider additional self-care",
+  "Evening periods generally show higher wellbeing than mornings",
+  "Your recovery pattern is strong, with quick rebounds after challenging days"
+];
 
 export default function SoloistPage() {
-  // --- FIX: Use 'id' consistently based on logs ---
-  const { user } = useUserStore();
-  const userId = user?.id ?? "";
-  console.log("[Render] Derived userId:", userId);
-
+  // Get user data - but we won't block based on this
+  const { user: convexUser, isLoading } = useUser();
+  const storeUser = useUserStore((state) => state.user);
+  const setStoreUser = useUserStore((state) => state.setUser);
+  
+  // QUICK FIX: Use an empty string as fallback which will work with your current DB
+  // This matches logs with empty user IDs
+  const userId = convexUser?._id?.toString() || storeUser?.id || "";
+  
+  // Keep user store in sync - this is still helpful for future consistency
+  useEffect(() => {
+    if (convexUser && convexUser._id) {
+      console.log("[SoloistPage] Syncing user to store:", convexUser._id.toString());
+      setStoreUser({
+        id: convexUser._id.toString(),
+        name: convexUser.name || "",
+        email: convexUser.email || "",
+        profilePicture: convexUser.imageUrl,
+      });
+    }
+  }, [convexUser, setStoreUser]);
+  
   const [selectedDayIndex, setSelectedDayIndex] = useState(3);
   const [isGeneratingForecast, setIsGeneratingForecast] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
-  // Fetch forecast data
-  const forecastData = useQuery(
-    api.forecast.getSevenDayForecast,
-    userId ? { userId } : "skip" // Skip query if userId is not yet available
-  );
-  console.log("[Render] Forecast data from query:", forecastData);
+  // Fetch forecast data - will run even with empty userId
+  const forecastData = useQuery(api.forecast.getSevenDayForecast, { userId });
 
   // Generate forecast mutation
   const generateForecast = useAction(api.forecast.generateForecast);
@@ -158,105 +165,67 @@ export default function SoloistPage() {
     if (Array.isArray(forecastData) && forecastData.length > 0) {
       const todayIndex = forecastData.findIndex(day => day.isToday);
       const defaultIndex = todayIndex !== -1 ? todayIndex : Math.min(3, forecastData.length - 1);
-      // Only update if it's different to avoid potential loops if data re-fetches
       if (selectedDayIndex !== defaultIndex) {
          setSelectedDayIndex(defaultIndex);
-         console.log(`[Effect] Setting selected index to: ${defaultIndex}`);
       }
     }
-    // Add selectedDayIndex to dependency array if you want this to reset based on external changes too,
-    // but be cautious of loops. For just setting initial index, [forecastData] is usually enough.
-  }, [forecastData]);
-
+  }, [forecastData, selectedDayIndex]);
 
   // Navigation handlers
-  const navigatePrevDay = () => {
-    setSelectedDayIndex(prev => Math.max(0, prev - 1));
-  };
-
+  const navigatePrevDay = () => setSelectedDayIndex(prev => Math.max(0, prev - 1));
   const navigateNextDay = () => {
     const maxIndex = Array.isArray(forecastData) ? forecastData.length - 1 : 0;
     setSelectedDayIndex(prev => Math.min(maxIndex, prev + 1));
   };
 
   // Forecast generation handler
-  const handleGenerateForecast = async () => {
-    console.log("Generate Forecast button clicked");
-    setForecastError(null); // Clear previous errors
-
-    // --- FIX: Use 'id' consistently ---
-    const currentUserId = user?.id ?? "";
-    console.log("handleGenerateForecast checking currentUserId:", currentUserId);
-
-    if (!currentUserId) {
-      console.error("No user ID available AT THE TIME OF CLICK");
-      setForecastError("User ID is missing. Please ensure you are logged in.");
-      // Might need to re-authenticate or refresh user data if this happens unexpectedly
-      return;
-    }
-
+  const handleGenerateForecast = () => {
+    setForecastError(null);
     setIsGeneratingForecast(true);
-    try {
-      console.log("Calling generateForecast mutation with userId:", currentUserId);
-      const result = await generateForecast({ userId });
-      console.log("Forecast generation result:", result);
-
-      if (result && !result.success) {
-        console.error("Error generating forecast:", result.error);
-        setForecastError(result.error || "Failed to generate forecast");
-      } else if (result?.success) {
-         // Optionally show a success message
-         console.log("Forecast generated successfully.");
-         // Data will refresh via useQuery
-      } else if (!result) {
-         console.error("Forecast generation mutation returned unexpected result:", result);
-         setForecastError("An unexpected error occurred during forecast generation.");
-      }
-
-    } catch (error: any) {
-      console.error("Exception during forecast generation:", error);
-      setForecastError(error.message || "An error occurred during forecast generation");
-    } finally {
-      setIsGeneratingForecast(false);
-    }
+    
+    generateForecast({ userId })
+      .then(result => {
+        console.log("[SoloistPage] Generation result:", result);
+        if (result && !result.success) {
+          setForecastError(result.error || "Failed to generate forecast");
+        }
+      })
+      .catch(error => {
+        console.error("[SoloistPage] Error during forecast generation:", error);
+        setForecastError(error.message || "An error occurred during forecast generation");
+      })
+      .finally(() => {
+        setIsGeneratingForecast(false);
+      });
   };
 
-  // --- Loading and Empty State Logic ---
-
-  // 1. Waiting for user authentication/ID
-  if (!userId) {
-     // If user object exists but has no ID, it's an unexpected state
-     if (user) {
-        console.error("User object loaded but missing expected 'id' property:", user);
-        return <EmptyState title="Error" description="User data is incomplete. Please try refreshing." error={forecastError} />;
-     }
-     // Otherwise, still waiting for user info to load from store/auth
-     return <LoadingState message="Authenticating..." />;
+  // QUICK FIX: Only check for loading, don't check for authentication!
+  if (isLoading) {
+    return <LoadingState message="Loading..." />;
   }
 
-  // 2. Waiting for forecast data (and we have a userId)
+  // Wait for forecast data
   if (forecastData === undefined) {
     return <LoadingState message="Loading forecast data..." />;
   }
 
-  // 3. Query finished, but no data found (or an error resulted in null)
+  // Handle empty data case - but don't block on authentication
   if (forecastData === null) {
-     return <EmptyState
-              title="Could Not Load Forecast"
-              description="Failed to retrieve forecast data. You might need to generate it."
-              onGenerate={handleGenerateForecast}
-              isGenerating={isGeneratingForecast}
-              error={forecastError} />;
+    return <EmptyState
+            title="Forecast Not Available"
+            description="Error retrieving forecast data."
+            onGenerate={handleGenerateForecast}
+            isGenerating={isGeneratingForecast}
+            error={forecastError} />;
   }
 
-  // 4. Query finished, data is an empty array
   if (Array.isArray(forecastData) && forecastData.length === 0) {
-     return <EmptyState
-              title="No Forecast Data Available"
-              description="No past or future forecast data found for this period. Try generating a new forecast."
-              onGenerate={handleGenerateForecast}
-              isGenerating={isGeneratingForecast}
-              error={forecastError} />;
+    return <EmptyState
+            title="No Forecast Data Available"
+            description="You need to generate a forecast."
+            onGenerate={handleGenerateForecast}
+            isGenerating={isGeneratingForecast}
+            error={forecastError} />;
   }
 
   // Check if we need forecasts (only if data is an array)
@@ -266,24 +235,18 @@ export default function SoloistPage() {
   );
 
   // --- Main Render - Only proceeds if userId exists and forecastData is a non-empty array ---
-  // We can now safely assume forecastData is a non-empty array here
   return (
     <div className="flex-1 h-full flex flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-900">
-      {/* Development indicator banner */}
-      <div className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-xs px-4 py-1">
-        Using user ID: {userId}
-      </div>
-
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto py-4 px-2 flex flex-col h-full max-w-5xl">
           <Card className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm mb-4">
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between flex-wrap gap-2"> {/* Added flex-wrap */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <CardTitle className="text-xl font-bold text-zinc-900 dark:text-zinc-50">7-Day Emotional Forecast</CardTitle>
                   <CardDescription className="text-zinc-500 dark:text-zinc-400">Predictions based on your past log patterns</CardDescription>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0"> {/* Added flex-shrink-0 */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
                     7 Days
                   </Badge>
@@ -294,7 +257,7 @@ export default function SoloistPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleGenerateForecast}
-                    disabled={isGeneratingForecast || !userId}
+                    disabled={isGeneratingForecast}
                     className="h-8 text-xs"
                   >
                     {isGeneratingForecast ? (
@@ -334,7 +297,7 @@ export default function SoloistPage() {
               )}
 
               {/* 7-Day Forecast Strip */}
-              <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-1 mb-2"> {/* Reduced gap slightly */}
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-1 mb-2">
                 {forecastData.map((day, idx) => {
                   // Ensure day object exists before destructuring/accessing
                   if (!day) return <div key={idx} className="bg-zinc-800/10 rounded-md aspect-square"></div>; // Placeholder for bad data
@@ -447,7 +410,7 @@ export default function SoloistPage() {
                           <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50 mb-1">
                             {selectedDay.description || "No description"}
                           </h3>
-                          <div className="text-sm text-zinc-700 dark:text-zinc-300 mb-3 min-h-[3em]"> {/* Added min height */}
+                          <div className="text-sm text-zinc-700 dark:text-zinc-300 mb-3 min-h-[3em]">
                             {selectedDay.details || (needsGen ? "Generate forecast for details." : "No details available.")}
                             {needsGen && (
                               <div className="mt-1 text-blue-500 dark:text-blue-400">

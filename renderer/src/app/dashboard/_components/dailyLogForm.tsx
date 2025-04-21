@@ -1,3 +1,6 @@
+// DAILY LOG FORM
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/dailyLogForm.tsx
+
 "use client";
 
 import React, { useEffect, useState } from "react";

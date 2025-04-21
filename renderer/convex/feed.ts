@@ -2,7 +2,7 @@
 // /Users/matthewsimon/Documents/Github/solo-heatMaps/soloist/convex/feed.ts
 
 import { query, action, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v } from "convex/values"; // Fixed import for v
 import { api } from "./_generated/api";
 import { Id, Doc } from "./_generated/dataModel";
 

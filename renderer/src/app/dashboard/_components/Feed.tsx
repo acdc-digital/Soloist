@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function Feed() {
   const { selectedDate, setFeedMessages, activeTab, feedMessages, loading, setLoading } = useFeedStore();
   const { user } = useUserStore();
-  const userId = user?.id || "";
+  const userId = user?._id ?? "";
   
   // Fetch feed messages for the user
   const feedMessagesData = useQuery(api.feed.listFeedMessages, { userId });

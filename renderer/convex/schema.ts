@@ -4,6 +4,7 @@ import { v } from "convex/values";
  
 const schema = defineSchema({
   ...authTables,
+  
   logs: defineTable({
     userId: v.string(),
     date: v.string(),
@@ -11,8 +12,7 @@ const schema = defineSchema({
     score: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-  .index("byUserDate", ["userId", "date"]),
+  }).index("byUserDate", ["userId", "date"]),
 
   feed: defineTable({
     userId: v.string(),
@@ -26,11 +26,14 @@ const schema = defineSchema({
     date: v.string(),
     emotionScore: v.number(),
     trend: v.string(),
+    details: v.string(),
     description: v.string(),
     recommendation: v.string(),
     createdAt: v.number(),
+    confidence: v.number(),
+    basedOnDays: v.array(v.string()),
   })
-    .index("byUserDate", ["userId", "date"]),
+  .index("byUserDate", ["userId", "date"]),
 
   // other tables...
 });

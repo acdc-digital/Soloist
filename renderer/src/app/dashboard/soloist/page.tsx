@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-=======
 // SOLOIST (FORECAST)
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/soloist/page.tsx
 
->>>>>>> 56bd30b (Updated Authentication Flow)
 "use client";
 
 import { useState, useEffect } from "react";

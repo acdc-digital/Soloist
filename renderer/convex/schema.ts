@@ -1,17 +1,12 @@
-<<<<<<< HEAD
-=======
 // CONVEX SCHEMA
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/convex/schema.ts
 
->>>>>>> 56bd30b (Updated Authentication Flow)
 import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
  
 const schema = defineSchema({
   ...authTables,
-<<<<<<< HEAD
-=======
 
   users: defineTable({
     authId: v.optional(v.string()),
@@ -26,7 +21,6 @@ const schema = defineSchema({
   })
   .index("email", ["email"])
   .index("byAuthId", ["authId"]),
->>>>>>> 56bd30b (Updated Authentication Flow)
   
   logs: defineTable({
     userId: v.string(),

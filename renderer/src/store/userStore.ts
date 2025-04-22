@@ -1,24 +1,6 @@
 // ZUSTAND USER STORE
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/store/userStore.ts
 
-<<<<<<< HEAD
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-
-export interface User {
-  id: string
-  name: string
-  email: string
-  profilePicture?: string
-}
-
-interface UserState {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  setUser: (user: User | null) => void
-  signOut: () => void
-=======
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -39,7 +21,6 @@ interface UserState {
   updateUser: (updates: Partial<User>) => void;
   signOut: () => void;
   setAuthStatus: (status: { isAuthenticated: boolean; isLoading: boolean }) => void;
->>>>>>> 56bd30b (Updated Authentication Flow)
 }
 
 export const useUserStore = create<UserState>()(
@@ -48,13 +29,6 @@ export const useUserStore = create<UserState>()(
       user: null,
       isAuthenticated: false,
       isLoading: true,
-<<<<<<< HEAD
-      setUser: (user) => set({ 
-        user, 
-        isAuthenticated: !!user,
-        isLoading: false
-      }),
-=======
       
       // Set entire user object
       setUser: (user) => set({ 
@@ -78,20 +52,11 @@ export const useUserStore = create<UserState>()(
       }),
       
       // Sign out - clear user
->>>>>>> 56bd30b (Updated Authentication Flow)
       signOut: () => set({ 
         user: null, 
         isAuthenticated: false,
         isLoading: false
       }),
-<<<<<<< HEAD
-    }),
-    {
-      name: 'user-storage',
-    }
-  )
-)
-=======
       
       // Set authentication status without changing user
       setAuthStatus: ({ isAuthenticated, isLoading }) => 
@@ -127,4 +92,3 @@ export const useUserStore = create<UserState>()(
     }
   )
 );
->>>>>>> 56bd30b (Updated Authentication Flow)

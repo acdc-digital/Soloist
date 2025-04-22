@@ -1,24 +1,6 @@
 // DASHBOARD LAYOUT
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/layout.tsx
 
-<<<<<<< HEAD
-import React from "react";
-import DraggableHeader from "./_components/DraggableHeader";
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="border-b border-zinc-200">
-        <DraggableHeader />
-      </div>
-      {/* Fill remaining space with the page content */}
-      <div className="flex-1 overflow-hidden">
-        {children}
-      </div>
-    </div>
-  );
-}
-=======
 "use client";
 
 import React, { useEffect } from "react";
@@ -74,4 +56,3 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 };
 
 export default DashboardLayout;
->>>>>>> 56bd30b (Updated Authentication Flow)

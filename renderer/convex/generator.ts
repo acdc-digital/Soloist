@@ -1,12 +1,9 @@
-<<<<<<< HEAD
 // convex/generator.ts
-=======
-// CONVEX GENERATOR
-// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/convex/generator.ts
->>>>>>> 56bd30b (Updated Authentication Flow)
-
+// /convex/generator.ts
 import { v } from "convex/values";
-import { action, internalAction } from "./_generated/server"; // Use internalAction
+import { internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 // Define the expected structure from OpenAI response choices
 interface OpenAIChatCompletion {
@@ -17,125 +14,137 @@ interface OpenAIChatCompletion {
   }>;
 }
 
+// Define types for our forecast
+interface PastLog {
+  date: string;
+  score: number;
+  activities?: string[];
+  notes?: string;
+}
+
+interface GeneratedForecast {
+  date: string;
+  emotionScore: number;
+  description: string;
+  trend: "up" | "down" | "stable";
+  details: string;
+  recommendation: string;
+  confidence: number;
+}
+
 // Helper function (optional, can be kept here or moved)
 const getISODateString = (date: Date): string => {
   return date.toISOString().split("T")[0];
 };
 
-
-// --- Internal Action to Generate Forecast using OpenAI ---
-export const generateForecast = action({
-  args: { userId: v.string() },
+// --- Internal Action to Generate Forecast using AI ---
+export const generateForecastWithAI = internalAction({
+  args: {
+    userId: v.string(),
+    pastLogs: v.array(v.object({
+      date: v.string(),
+      score: v.number(),
+      activities: v.optional(v.array(v.string())),
+      notes: v.optional(v.string())
+    })),
+    targetDates: v.array(v.string())
+  },
   handler: async (ctx, args) => {
-    console.log("[Action generateForecast] called for userId:", args.userId);
+    const { userId, pastLogs, targetDates } = args;
+    
+    console.log(`[Action generateForecastWithAI] Generating forecasts for user ${userId} for dates:`, targetDates);
+    console.log(`[Action generateForecastWithAI] Using ${pastLogs.length} past logs as training data`);
 
-    // MODIFIED: Allow empty user IDs to match our query behavior
-    // Instead of rejecting empty IDs, we'll use them as-is
-    // if (!args.userId || args.userId.trim() === "") {
-    //    console.error("[Action generateForecast] Error: Received empty or invalid userId.");
-    //    return { success: false, error: "Backend Error: User ID was missing or empty." };
-    // }
-
-    const today = new Date();
-    const todayISO = getISODateString(today);
-
-    // 1. Fetch past logs using runQuery
-    const pastLogs = await ctx.runQuery(api.forecast.getLogsForUser, { // Using the query in *this* file
-       userId: args.userId,
-       endDate: todayISO,
-    });
-
-    // Sort and limit in JavaScript (already sorted desc by query, just slice)
-    const recentPastLogs = pastLogs.slice(0, 14); // Get up to 14 days for prediction model
-
-    console.log(`[Action generateForecast] Found ${recentPastLogs.length} past logs for user ${args.userId}`);
-
-    if (recentPastLogs.length < MIN_LOGS_FOR_FORECAST) {
-      const errorMsg = `Not enough past data (${recentPastLogs.length}/${MIN_LOGS_FOR_FORECAST}) for forecast`;
-      console.log(`[Action generateForecast] ${errorMsg}`);
-      return { success: false, error: errorMsg };
-    }
-
-    // Prepare data for the generator action
-    const simplifiedLogs = recentPastLogs.map(log => ({
-      date: log.date,
-      score: log.score ?? 0,
-      // Ensure answers parsing is robust
-      activities: (typeof log.answers === 'object' && log.answers?.activities) ? log.answers.activities : [],
-      notes: typeof log.answers === 'string' ? log.answers : JSON.stringify(log.answers ?? {}) // Handle null answers
-    }));
-
-    // Generate target dates
-    const targetDates = Array.from({ length: FORECAST_DAYS }, (_, i) => getISODateString(addDays(today, i + 1)));
-
-    console.log("[Action generateForecast] Target dates for forecast:", targetDates);
-
+    // In a real implementation, this would call OpenAI or another AI service
+    // For now, we'll generate mock forecasts as a placeholder
+    
     try {
-      // 2. Call the generator action using ctx.runAction
-      console.log(`[Action generateForecast] Calling generator.generateForecastWithAI for user ${args.userId}`);
-      // Using internal.generator... assumes generateForecastWithAI is internalAction
-      const forecasts = await ctx.runAction(internal.generator.generateForecastWithAI, {
-        userId: args.userId,
-        pastLogs: simplifiedLogs,
-        targetDates
+      // Simulate AI processing time (only in development)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Generate a forecast for each target date
+      const forecasts: GeneratedForecast[] = targetDates.map((date, index) => {
+        // Get the last log's score as reference
+        const sortedLogs = [...pastLogs].sort((a, b) => a.date.localeCompare(b.date));
+        const lastLog = sortedLogs[sortedLogs.length - 1];
+        const lastScore = lastLog?.score || 50;
+        
+        // Generate a score with some variation
+        // First day slight change, second day more change, third day even more
+        const variation = (Math.random() * 20 - 10) * (index + 1) * 0.5;
+        let predictedScore = Math.round(Math.max(0, Math.min(100, lastScore + variation)));
+        
+        // Determine trend
+        let trend: "up" | "down" | "stable"; 
+        if (predictedScore > lastScore + 5) trend = "up";
+        else if (predictedScore < lastScore - 5) trend = "down";
+        else trend = "stable";
+        
+        // Calculate confidence (decreases with distance)
+        const confidence = Math.round(90 - (index * 15));
+        
+        return {
+          date,
+          emotionScore: predictedScore,
+          description: getDescriptionFromScore(predictedScore),
+          trend,
+          details: generateDetails(predictedScore, trend, index),
+          recommendation: generateRecommendation(predictedScore),
+          confidence
+        };
       });
-
-      if (!Array.isArray(forecasts)) {
-         console.error("[Action generateForecast] Generator did not return an array:", forecasts);
-         throw new Error("Forecast generation returned invalid data.");
-      }
-      console.log(`[Action generateForecast] Received ${forecasts.length} forecasts from generator for user ${args.userId}`);
-
-
-      // 3. Save forecasts to database using runMutation
-      const savedForecasts = [];
-      for (const forecast of forecasts) {
-        // Basic validation
-        if (!forecast || typeof forecast.date !== 'string' || typeof forecast.emotionScore !== 'number') {
-           console.warn("[Action generateForecast] Skipping invalid forecast object from generator:", forecast);
-           continue;
-        }
-
-        console.log(`[Action generateForecast] Saving forecast via mutation for date: ${forecast.date} for user ${args.userId}`);
-
-        // Delete existing first (atomic within its mutation)
-        await ctx.runMutation(internal.forecast.deleteExistingForecast, {
-           userId: args.userId,
-           date: forecast.date
-        });
-
-        // Insert new forecast (atomic within its mutation)
-        const forecastId = await ctx.runMutation(internal.forecast.insertForecast, {
-          userId: args.userId,
-          date: forecast.date,
-          emotionScore: forecast.emotionScore,
-          description: forecast.description || "N/A",
-          trend: forecast.trend || "stable",
-          details: forecast.details || "",
-          recommendation: forecast.recommendation || "",
-          confidence: forecast.confidence || 0,
-          basedOnDays: recentPastLogs.map(log => log.date), // Be mindful of size
-        });
-
-        console.log(`[Action generateForecast] Saved forecast ID ${forecastId} for user ${args.userId}`);
-        if (forecastId) { // Check if ID was returned
-           savedForecasts.push({
-             _id: forecastId, // Use the ID returned by the mutation
-             date: forecast.date,
-             score: forecast.emotionScore
-           });
-        }
-      }
-
-      console.log(`[Action generateForecast] Successfully saved ${savedForecasts.length} forecasts for user ${args.userId}`);
-      return { success: true, forecasts: savedForecasts };
-
+      
+      console.log(`[Action generateForecastWithAI] Successfully generated ${forecasts.length} forecasts`);
+      return forecasts;
+      
     } catch (error: any) {
-      console.error(`[Action generateForecast] Error during forecast generation/saving for user ${args.userId}:`, error);
-      return {
-        success: false,
-        error: `Failed to generate forecast: ${error.message}`
-      };
+      console.error("[Action generateForecastWithAI] Error generating forecasts:", error);
+      throw new Error(`AI forecast generation failed: ${error.message}`);
     }
   }
 });
+
+// --- Helper Functions ---
+function getDescriptionFromScore(score: number): string {
+  if (score >= 90) return "Exceptional Day";
+  if (score >= 80) return "Excellent Day";
+  if (score >= 70) return "Very Good Day";
+  if (score >= 60) return "Good Day";
+  if (score >= 50) return "Balanced Day";
+  if (score >= 40) return "Mild Challenges";
+  if (score >= 30) return "Challenging Day";
+  if (score >= 20) return "Difficult Day";
+  if (score >= 10) return "Very Challenging";
+  return "Extremely Difficult";
+}
+
+function generateDetails(score: number, trend: string, dayIndex: number): string {
+  const dayTerms = ["tomorrow", "the day after tomorrow", "in two days"];
+  const dayTerm = dayTerms[dayIndex] || "in the coming days";
+  
+  if (score >= 80) {
+    return `Based on your patterns, you're likely to have an excellent day ${dayTerm}. Your recent positive momentum suggests high emotional wellbeing will continue.`;
+  } else if (score >= 60) {
+    return `Your forecast shows a good day ${dayTerm}. You tend to maintain positive emotions in similar circumstances, which should continue.`;
+  } else if (score >= 40) {
+    return `Expecting a balanced day ${dayTerm}. Your emotional patterns suggest you'll experience both challenges and rewards in moderate amounts.`;
+  } else if (score >= 20) {
+    return `You may face some challenges ${dayTerm}. Your patterns suggest this could be a somewhat difficult period, but temporary.`;
+  } else {
+    return `Your forecast indicates significant challenges ${dayTerm}. Based on your patterns, this may be a difficult day emotionally, but remember that these periods are temporary.`;
+  }
+}
+
+function generateRecommendation(score: number): string {
+  if (score >= 80) {
+    return "Continue your current activities and consider ways to share your positive energy with others.";
+  } else if (score >= 60) {
+    return "Maintain your healthy routines and consider planning something enjoyable to further boost your wellbeing.";
+  } else if (score >= 40) {
+    return "Focus on balanced self-care and set reasonable expectations for your tasks and interactions.";
+  } else if (score >= 20) {
+    return "Prioritize rest and self-compassion. Consider reducing commitments if possible and focus on activities that have improved your mood in the past.";
+  } else {
+    return "This is a time to be especially gentle with yourself. Reach out to supportive people, minimize stressors, and focus on basic self-care like rest and nourishment.";
+  }
+}

@@ -3,6 +3,10 @@
 
 import { ConvexClientProvider } from "@/provider/ConvexClientProvider";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
+<<<<<<< HEAD
+=======
+import { UserProvider } from "@/provider/userContext";
+>>>>>>> 56bd30b (Updated Authentication Flow)
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -26,7 +30,14 @@ export default function RootLayout({
         <head />
         <body className={`font-sans ${inter.variable}`}>
           <ConvexClientProvider>
+<<<<<<< HEAD
             <main className="min-h-screen">{children}</main>
+=======
+            {/* Wrap children in our UserProvider to provide user context */}
+            <UserProvider>
+              <main className="min-h-screen">{children}</main>
+            </UserProvider>
+>>>>>>> 56bd30b (Updated Authentication Flow)
           </ConvexClientProvider>
         </body>
       </html>

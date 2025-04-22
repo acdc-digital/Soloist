@@ -1,81 +1,71 @@
 // useUSER
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/hooks/useUser.tsx
 
-"use client";
+import { useAuthToken } from "@convex-dev/auth/react";
+import { useQuery, useMutation } from "convex/react";
+import { jwtDecode } from "jwt-decode";
+import { api } from "../../convex/_generated/api";
+import { useEffect, useCallback } from "react";
 
-import { useState, useEffect } from "react";
-import { useAuthActions } from "@convex-dev/auth/react";
+interface DecodedToken {
+  sub: string;
+}
 
 export function useUser() {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const token = useAuthToken();
+  let userId: string | null = null;
+
+  if (token) {
+    try {
+      const decoded = jwtDecode<DecodedToken>(token);
+      userId = decoded.sub;
+    } catch (error) {
+      console.error("Failed to decode token:", error);
+    }
+  }
+
+  // When no user is signed in, skip the query to avoid errors
+  const user = useQuery(api.users.getUser, userId ? { id: userId } : "skip");
   
-  // This should be available in most Convex auth versions
-  const authActions = useAuthActions();
-
-  useEffect(() => {
-    // Function to get user data or check authentication state
-    async function getUserData() {
-      try {
-        // Attempt to call a method that might exist on authActions
-        // This is based on common Convex auth patterns
-        if (typeof authActions?.getUserIdentity === 'function') {
-          const userData = await authActions.getUserIdentity();
-          if (userData) {
-            setUser(userData);
-            setIsAuthenticated(true);
-          } else {
-            setIsAuthenticated(false);
-          }
-        } 
-        // Alternative method name
-        else if (typeof authActions?.getSession === 'function') {
-          const session = await authActions.getSession();
-          if (session?.user) {
-            setUser(session.user);
-            setIsAuthenticated(true);
-          } else {
-            setIsAuthenticated(false);
-          }
-        }
-        // Direct property access as fallback
-        else if (authActions?.user) {
-          setUser(authActions.user);
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error("Error getting user data:", error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    getUserData();
+  // Get the upsertion mutation
+  const upsertUser = useMutation(api.users.upsertUser);
+  
+  // Callback to ensure user document exists
+  const ensureUserDocument = useCallback(async (name?: string, email?: string, image?: string) => {
+    if (!userId) return null;
     
-    // Check if there's a observable auth state, and subscribe if possible
-    if (typeof authActions?.onAuthChange === 'function') {
-      const unsubscribe = authActions.onAuthChange((newState) => {
-        if (newState?.user) {
-          setUser(newState.user);
-          setIsAuthenticated(true);
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-        setIsLoading(false);
+    try {
+      const result = await upsertUser({ 
+        authId: userId, 
+        name, 
+        email, 
+        image 
       });
-      
-      return unsubscribe;
+      return result;
+    } catch (err) {
+      console.error("Failed to upsert user:", err);
+      return null;
     }
-  }, [authActions]);
+  }, [userId, upsertUser]);
 
   return {
     user,
-    isLoading,
-    isAuthenticated,
+    isSignedIn: Boolean(userId),
+    isLoaded: token !== undefined, // More accurate, handles loading state
+    userId: userId || "", // Always return a string (never null)
+    ensureUserDocument, // Expose method to manually trigger user creation/update
   };
+}
+
+// Separate hook for upserting the user with auto-trigger
+export function useUpsertUser(name?: string, email?: string, image?: string) {
+  const { userId, ensureUserDocument } = useUser();
+
+  useEffect(() => {
+    if (userId) {
+      ensureUserDocument(name, email, image);
+    }
+  }, [userId, name, email, image, ensureUserDocument]);
+
+  return { ensureUserDocument };
 }

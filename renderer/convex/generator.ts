@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 // convex/generator.ts
+=======
+// CONVEX GENERATOR
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/convex/generator.ts
+>>>>>>> 56bd30b (Updated Authentication Flow)
 
 import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server"; // Use internalAction

@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 // convex/forecast.ts
+=======
+// FORECAST
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/convex/forecast.ts
+>>>>>>> 56bd30b (Updated Authentication Flow)
 
 import { v } from "convex/values";
 // --- Import necessary types ---

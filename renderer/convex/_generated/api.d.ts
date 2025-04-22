@@ -20,6 +20,7 @@ import type * as forecast from "../forecast.js";
 import type * as generator from "../generator.js";
 import type * as http from "../http.js";
 import type * as score from "../score.js";
+import type * as users from "../users.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   generator: typeof generator;
   http: typeof http;
   score: typeof score;
+  users: typeof users;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

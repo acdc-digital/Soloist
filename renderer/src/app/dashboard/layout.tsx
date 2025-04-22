@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 // Import our enhanced hooks
 import { useUser, useUpsertUser } from "@/hooks/useUser";
 import { useUserId } from "@/hooks/useUserId";
+import DraggableHeader from "./_components/DraggableHeader";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -27,12 +28,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   // Ensures that a user doc exists and is updated whenever auth state changes
   useUpsertUser(user?.name, user?.email, user?.image);
   
-  // Log userId to verify it's working
-  useEffect(() => {
-    console.log("DashboardLayout - User ID:", userId);
-    console.log("DashboardLayout - Is Authenticated:", hasUserId);
-  }, [userId, hasUserId]);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -49,8 +44,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   // Once authenticated, render the dashboard layout children
   return (
-    <div className="dashboard-content">
-      {children}
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Header - fixed height */}
+      <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
+        <DraggableHeader />
+      </div>
+
+      {/* Main content area - takes remaining height */}
+      <div className="flex-1 overflow-hidden">
+        {children}
+      </div>
     </div>
   );
 };

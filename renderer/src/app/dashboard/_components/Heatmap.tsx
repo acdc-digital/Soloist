@@ -112,11 +112,9 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
   };
 
   return (
-    <div
-      className="border border-zinc-200 dark:border-zinc-700 rounded-md p-3 flex flex-col h-full"
-      style={{ minHeight: "400px" }}
-    >
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex flex-col h-full">
+      {/* Top section with badges and info */}
+      <div className="flex-shrink-0 flex items-center justify-between mb-2 px-3 pt-2">
         <div className="flex items-center gap-2 text-sm">
           <Badge variant="outline" className="border-zinc-700 text-zinc-600 dark:text-zinc-300">
             {totalLogs} Logs
@@ -139,9 +137,10 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
         </TooltipProvider>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <ScrollArea className="w-full h-full">
-          <div className="flex flex-wrap gap-0.75 p-1">
+      {/* The scrollable calendar area */}
+      <div className="flex-1 min-h-0 border border-zinc-200 dark:border-zinc-700 rounded-md mx-0">
+        <ScrollArea className="h-full">
+          <div className="flex flex-wrap gap-0.75 p-3">
             {allDates.map((dateObj) => {
               const dateKey = buildDateKey(dateObj);
               const dayLog = logsMap.get(dateKey);
@@ -187,7 +186,8 @@ export default function Heatmap({ dailyLogs, year, onSelectDate }: HeatmapProps)
         </ScrollArea>
       </div>
 
-      <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+      {/* Fixed legend at the bottom */}
+      <div className="flex-shrink-0 mt-2 mb-2 px-4 text-xs text-zinc-500 dark:text-zinc-400">
         <div className="mb-2">Score legend:</div>
         <div className="flex flex-wrap gap-2">
           {legendItems.map((item) => (

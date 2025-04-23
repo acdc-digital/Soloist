@@ -25,7 +25,7 @@ Solo (Solomon Powered) heatMaps is a unique daily log. Users input a variety of 
 5. git add ./ commit/ push as usual
 
 Authetication:
-```
+```mermaid
 graph LR
     A[User] -->|Login with GitHub| B[OAuth Authentication]
     B -->|Generate Auth Token| C[Create User Document]

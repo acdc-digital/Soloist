@@ -23,3 +23,12 @@ Solo (Solomon Powered) heatMaps is a unique daily log. Users input a variety of 
 **development instructions:**   
 4. git checkout -b *new-branch*   
 5. git add ./ commit/ push as usual
+
+Authetication:
+```
+graph LR
+    A[User] -->|Login with GitHub| B[OAuth Authentication]
+    B -->|Generate Auth Token| C[Create User Document]
+    C -->|Store User ID| D[Application State]
+    D -->|Persist Across Components| E[Protected Features]
+```

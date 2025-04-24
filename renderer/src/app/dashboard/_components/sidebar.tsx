@@ -213,7 +213,10 @@ export function Sidebar({ className }: SidebarProps) {
                       className="w-full py-1.5 px-2 flex items-center justify-start text-left rounded-lg hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
                     >
                       <Avatar className="h-7 w-7 flex-shrink-0 ring-1 ring-offset-1 ring-offset-zinc-50/60 dark:ring-offset-zinc-950/60 ring-zinc-300/50 dark:ring-zinc-700/50">
-                        <AvatarImage src={user?.profilePicture || ""} alt={user?.name || "User Avatar"} />
+                        <AvatarImage
+                          src={user?.profilePicture || undefined}
+                          alt={user?.name || "User Avatar"}
+                        />
                         <AvatarFallback className="bg-zinc-200 text-zinc-700 text-[10px] dark:bg-zinc-800 dark:text-zinc-300 font-medium">
                           {user?.name?.substring(0, 1)?.toUpperCase() || "U"}
                         </AvatarFallback>

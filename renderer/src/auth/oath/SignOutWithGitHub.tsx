@@ -1,7 +1,7 @@
-"use client";
-
 // GITHUB SIGNOUT COMPONENT
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/auth/oath/SignOutWithGitHub.tsx
+
+"use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@/components/ui/button";

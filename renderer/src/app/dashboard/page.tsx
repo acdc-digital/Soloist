@@ -14,7 +14,8 @@ import { useUser } from "@/hooks/useUser";
 import { useUserStore } from "@/store/userStore";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useFeedStore } from "@/store/feedStore";
-import { getUserId } from "@/utils/userUtils"; // Import the utility
+import { getUserId } from "@/utils/userUtils";
+import { shallowEqual } from "@/utils/objectEquals";
 
 // Components
 import { Sidebar } from "./_components/sidebar";
@@ -56,19 +57,20 @@ export default function Dashboard() {
 
   // Second effect: auto-collapse left sidebar if (window < 1256) & feed is open
   useEffect(() => {
-    function handleWindowResize() {
-      if (window.innerWidth < 1256 && sidebarOpen) {
-        setCollapsed(true);
-      } else {
-        setCollapsed(false);
-      }
-    }
-
-    window.addEventListener("resize", handleWindowResize);
-    handleWindowResize(); // run once at mount
-
-    return () => window.removeEventListener("resize", handleWindowResize);
-  }, [sidebarOpen, setCollapsed]);
+    if (!user) return;                    // still loading
+  
+    const next = {
+      id:   user._id?.toString() ?? "",
+      name: user.name        ?? "",
+      email: user.email      ?? "",
+      profilePicture: user.imageUrl,
+    };
+  
+    // Functional update: we get the *current* store value
+    setStoreUser(prev => {
+      return shallowEqual(prev, next) ? prev : next;
+    });
+    }, [user, setStoreUser]);
 
   const handleSignOut = async () => {
     await signOut();

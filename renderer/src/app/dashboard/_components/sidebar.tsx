@@ -1,11 +1,10 @@
 // LEFT SIDEBAR
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/sidebar.tsx
 
+// /src/app/dashboard/_components/sidebar.tsx
 "use client";
-
 import React from "react";
 import { cn } from "@/lib/utils";
-
 import { useUserStore } from "@/store/userStore";
 import { useSidebarStore } from "@/store/sidebarStore";
 import {
@@ -19,7 +18,6 @@ import {
   PersonStanding,
   CircleHelpIcon,
 } from "lucide-react";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -32,19 +30,51 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
 // Import Stores & Modals
 import { SettingsDialog } from "@/app/settings/SettingsDialog";
 import { useFeedStore } from "@/store/feedStore";
+import { useUserContext } from "@/provider/userContext";  // Add this import
 
 interface SidebarProps {
   className?: string;
 }
 
 export function Sidebar({ className }: SidebarProps) {
-  const user = useUserStore((state) => state.user);
+  // Get user from both sources to ensure we have the most up-to-date info
+  const storeUser = useUserStore((state) => state.user);
+  const { user: contextUser } = useUserContext();  // Get user from context
   const signOut = useUserStore((state) => state.signOut);
-
+  
+  // Merge user data, preferring contextUser if available
+  const user = React.useMemo(() => {
+    if (!storeUser && !contextUser) return null;
+    
+    return {
+      ...storeUser,
+      ...contextUser,
+      // Ensure we map the image property correctly
+      profilePicture: contextUser?.image || storeUser?.profilePicture,
+      name: contextUser?.name || storeUser?.name,
+      email: contextUser?.email || storeUser?.email,
+    };
+  }, [storeUser, contextUser]);
+  
+  // Update Zustand store if context user changes and differs from store
+  React.useEffect(() => {
+    const updateUser = useUserStore.getState().updateUser;
+    if (contextUser && storeUser && (
+        contextUser.image !== storeUser.profilePicture || 
+        contextUser.name !== storeUser.name || 
+        contextUser.email !== storeUser.email
+      )) {
+      updateUser({
+        profilePicture: contextUser.image,
+        name: contextUser.name,
+        email: contextUser.email
+      });
+    }
+  }, [contextUser, storeUser]);
+  
   const { 
     collapsed, 
     toggleCollapsed, 
@@ -53,15 +83,15 @@ export function Sidebar({ className }: SidebarProps) {
     currentView,
     setView
   } = useSidebarStore();
-
+  
   // State to control the SettingsDialog
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-
+  
   // Handlers
   const handleGoToSettings = () => {
     setIsSettingsOpen(true);
   };
-
+  
   const handleCreateNewLog = () => {
     const {
       sidebarOpen,
@@ -71,30 +101,26 @@ export function Sidebar({ className }: SidebarProps) {
       setSelectedDate,
       setActiveTab,
     } = useFeedStore.getState();
-
     // Set view to dashboard when creating a new log
     setView("dashboard");
-
     // If it's already open on "log", close it
     if (sidebarOpen && activeTab === "log") {
       setSidebarOpen(false);
       resetFeed(); // optional if you want to clear the feed on close
       return;
     }
-
     // Otherwise, open and reset the "log" tab
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
     const dateKey = `${yyyy}-${mm}-${dd}`;
-
     resetFeed();
     setSelectedDate(dateKey);
     setActiveTab("log");
     setSidebarOpen(true);
   };
-
+  
   const handleSoloist = () => {
     // Switch to Soloist view
     setView("soloist");
@@ -105,16 +131,16 @@ export function Sidebar({ className }: SidebarProps) {
     
     console.log("Soloist action clicked");
   };
-
+  
   const handleGoTohelp = () => {
     console.log("Help action clicked");
   };
-
+  
   const handleSignOut = () => {
     signOut();
     console.log("User signed out");
   };
-
+  
   // Items that show only if expanded
   const mainActions = [
     { id: "soloist",  label: "Soloist",        icon: PersonStanding,  action: handleSoloist, active: currentView === "soloist" },
@@ -122,7 +148,15 @@ export function Sidebar({ className }: SidebarProps) {
     { id: "settings", label: "Settings",       icon: Settings,        action: handleGoToSettings },
     { id: "help",     label: "Help",           icon: CircleHelpIcon,  action: handleGoTohelp },
   ];
-
+  
+  // Get user initials for avatar fallback
+  const userInitials = React.useMemo(() => {
+    if (!user?.name) return "U";
+    const names = user.name.split(' ');
+    if (names.length === 1) return names[0].substring(0, 1).toUpperCase();
+    return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+  }, [user?.name]);
+  
   return (
     <div className={cn("relative h-screen", className)}>
       <div
@@ -147,7 +181,6 @@ export function Sidebar({ className }: SidebarProps) {
               <ArrowLeftFromLine className="h-4 w-4" />
             )}
           </Button>
-
           {/* Everything below is hidden if collapsed */}
           {!collapsed && (
             <div className="mt-4 space-y-3">
@@ -169,9 +202,7 @@ export function Sidebar({ className }: SidebarProps) {
                   />
                 </div>
               </div>
-
               <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40 -mx-2" />
-
               {/* ACTIONS */}
               <div>
                 <p className="px-2 mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
@@ -195,7 +226,6 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
           )}
         </div>
-
         {/* BOTTOM SECTION */}
         <div className="relative p-2">
           {/* ACCOUNT DROPDOWN */}
@@ -214,11 +244,11 @@ export function Sidebar({ className }: SidebarProps) {
                     >
                       <Avatar className="h-7 w-7 flex-shrink-0 ring-1 ring-offset-1 ring-offset-zinc-50/60 dark:ring-offset-zinc-950/60 ring-zinc-300/50 dark:ring-zinc-700/50">
                         <AvatarImage
-                          src={user?.profilePicture || undefined}
+                          src={user?.profilePicture || user?.image || undefined}
                           alt={user?.name || "User Avatar"}
                         />
                         <AvatarFallback className="bg-zinc-200 text-zinc-700 text-[10px] dark:bg-zinc-800 dark:text-zinc-300 font-medium">
-                          {user?.name?.substring(0, 1)?.toUpperCase() || "U"}
+                          {userInitials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="ml-2.5 overflow-hidden">
@@ -231,7 +261,6 @@ export function Sidebar({ className }: SidebarProps) {
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-
                   <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-56">
                     <DropdownMenuLabel className="text-xs text-zinc-500 dark:text-zinc-400 px-2 pt-1.5 pb-1 font-medium">
                       My Account
@@ -259,7 +288,6 @@ export function Sidebar({ className }: SidebarProps) {
           )}
         </div>
       </div>
-
       {/* Our new SettingsDialog component, controlled by local state */}
       <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </div>

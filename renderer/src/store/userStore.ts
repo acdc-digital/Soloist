@@ -1,6 +1,7 @@
 // ZUSTAND USER STORE
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/store/userStore.ts
 
+// /src/store/userStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -8,8 +9,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  profilePicture?: string;
-  // Add other user properties you want to track
+  profilePicture?: string; // Keep this for backward compatibility
+  image?: string;          // Add this to match Convex schema
   lastSyncedAt?: number;
 }
 
@@ -21,6 +22,7 @@ interface UserState {
   updateUser: (updates: Partial<User>) => void;
   signOut: () => void;
   setAuthStatus: (status: { isAuthenticated: boolean; isLoading: boolean }) => void;
+  syncUserWithConvex: (convexUser: any) => void; // Add this method
 }
 
 export const useUserStore = create<UserState>()(
@@ -65,7 +67,40 @@ export const useUserStore = create<UserState>()(
           isLoading,
           // Clear user if setting to unauthenticated
           ...(isAuthenticated === false ? { user: null } : {})
-        }))
+        })),
+
+      // New method to sync user data from Convex
+      syncUserWithConvex: (convexUser) => set((state) => {
+        if (!convexUser) return state;
+
+        // If we don't have a user yet, create one
+        if (!state.user) {
+          return {
+            user: {
+              id: convexUser._id?.toString() || convexUser.id || '',
+              name: convexUser.name || '',
+              email: convexUser.email || '',
+              profilePicture: convexUser.image || '',
+              image: convexUser.image || '',
+              lastSyncedAt: Date.now()
+            },
+            isAuthenticated: true,
+            isLoading: false
+          };
+        }
+        
+        // Otherwise update existing user
+        return {
+          user: {
+            ...state.user,
+            name: convexUser.name || state.user.name,
+            email: convexUser.email || state.user.email,
+            profilePicture: convexUser.image || state.user.profilePicture,
+            image: convexUser.image || state.user.image,
+            lastSyncedAt: Date.now()
+          }
+        };
+      })
     }),
     {
       name: 'user-storage',

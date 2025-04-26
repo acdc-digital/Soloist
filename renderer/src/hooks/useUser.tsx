@@ -1,107 +1,71 @@
 // useUSER
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/hooks/useUser.tsx
 
-// renderer/src/hooks/useUser.tsx
 import { useAuthToken } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
 import { jwtDecode } from "jwt-decode";
-import { useCallback, useEffect, useMemo } from "react";
-
 import { api } from "../../convex/_generated/api";
+import { useEffect, useCallback } from "react";
 import { getStableAuthId } from "@/utils/authId";
 
-interface TokenClaims {
+interface DecodedToken {
   sub: string;
-  name?: string;
-  email?: string;
-  picture?: string; // GitHub avatar URL
 }
 
 export function useUser() {
-  /* ───────────────── 1. Get the JWT from Convex Auth ─────────────── */
-  const token = useAuthToken();                // undefined while loading
+  const token = useAuthToken();
+  let userId: string | null = null;
 
-  /* ───────────────── 2. Decode it (memoised) ─────────────────────── */
-  const { authId, tokenName, tokenEmail, tokenAvatar } = useMemo(() => {
-    if (!token) {
-      return { authId: null, tokenName: "", tokenEmail: "", tokenAvatar: "" };
-    }
+  if (token) {
     try {
-      const c = jwtDecode<TokenClaims>(token);
-      return {
-        authId: getStableAuthId(c.sub),
-        tokenName:  c.name    ?? "",
-        tokenEmail: c.email   ?? "",
-        tokenAvatar: c.picture ?? "",
-      };
-    } catch (err) {
-      console.error("jwtDecode failed:", err);
-      return { authId: null, tokenName: "", tokenEmail: "", tokenAvatar: "" };
+      const decoded = jwtDecode<DecodedToken>(token);
+      userId = decoded.sub;
+    } catch (error) {
+      console.error("Failed to decode token:", error);
     }
-  }, [token]);
+  }
 
-  /* ───────────────── 3. Fetch our user row (skip until authId) ───── */
-  const user = useQuery(
-    api.users.getUser,
-    authId ? { id: authId } : "skip"
-  );
-
-  /* ───────────────── 4. Upsert helper ────────────────────────────── */
+  // When no user is signed in, skip the query to avoid errors
+  const user = useQuery(api.users.getUser, userId ? { id: userId } : "skip");
+  // Get the upsertion mutation
   const upsertUser = useMutation(api.users.upsertUser);
-
-  const ensureUserDocument = useCallback(
-    async () => {
-      if (!authId) return; // safety
-      try {
-        await upsertUser({
-          authId,
-          name:  tokenName,
-          email: tokenEmail,
-          image: tokenAvatar,
-        });
-      } catch (err) {
-        console.error("upsertUser failed:", err);
-      }
-    },
-    [authId, tokenName, tokenEmail, tokenAvatar, upsertUser]
-  );
-
-  /* ───────────────── 5. Run the upsert exactly once per authId ───── */
-  useEffect(() => {
-    if (authId) {
-      // fire-and-forget
-      void ensureUserDocument();
+  
+  // Callback to ensure user document exists
+  const ensureUserDocument = useCallback(async (name?: string, email?: string, image?: string) => {
+    if (!userId) return null;
+    
+    try {
+      const result = await upsertUser({ 
+        authId: userId, 
+        name, 
+        email, 
+        image 
+      });
+      return result;
+    } catch (err) {
+      console.error("Failed to upsert user:", err);
+      return null;
     }
-  }, [authId, ensureUserDocument]);
+  }, [userId, upsertUser]);
 
-  /* ───────────────── 6. Public API ───────────────────────────────── */
   return {
-    user,                    // Convex document (may be undefined while loading)
-    isSignedIn: !!authId,
-    isLoaded: token !== undefined,
-    userId: authId ?? "",
-
-    // expose these in case other hooks want them
-    tokenName,
-    tokenEmail,
-    tokenAvatar,
-
-    // expose manual helper (rarely needed now)
-    ensureUserDocument,
+    user,
+    isSignedIn: Boolean(userId),
+    isLoaded: token !== undefined, // More accurate, handles loading state
+    userId: userId || "", // Always return a string (never null)
+    ensureUserDocument, // Expose method to manually trigger user creation/update
   };
 }
 
-/* ───────────────── 7. Auto-upsert helper (kept for compatibility) ─ */
-export function useUpsertUser(
-  name?: string,
-  email?: string,
-  image?: string
-) {
+// Separate hook for upserting the user with auto-trigger
+export function useUpsertUser(name?: string, email?: string, image?: string) {
   const { userId, ensureUserDocument } = useUser();
 
   useEffect(() => {
-    if (userId) ensureUserDocument();
-  }, [userId, ensureUserDocument]);
+    if (userId) {
+      ensureUserDocument(name, email, image);
+    }
+  }, [userId, name, email, image, ensureUserDocument]);
 
   return { ensureUserDocument };
 }

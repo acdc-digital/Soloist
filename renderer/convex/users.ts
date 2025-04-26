@@ -63,7 +63,7 @@ export const upsertUser = mutation({
     if (!existingUser && email) {
       existingUser = await db
         .query("users")
-        .withIndex("byEmail", (q) => q.eq("email", email))
+        .withIndex("email", (q) => q.eq("email", email))
         .first();
     }
 

@@ -21,6 +21,7 @@ interface UserState {
   setUser: (user: User | null) => void;
   updateUser: (updates: Partial<User>) => void;
   signOut: () => void;
+  setLoading: (isLoading: boolean) => void;
   setAuthStatus: (status: { isAuthenticated: boolean; isLoading: boolean }) => void;
   syncUserWithConvex: (convexUser: any) => void; // Add this method
 }
@@ -33,13 +34,12 @@ export const useUserStore = create<UserState>()(
       isLoading: true,
       
       // Set entire user object
-      setUser: (user) => set({ 
-        user, 
-        isAuthenticated: !!user,
-        isLoading: false,
-        // Add lastSyncedAt timestamp when user is set
-        ...(user ? { user: { ...user, lastSyncedAt: Date.now() } } : {})
-      }),
+      setUser: (user) =>
+        set({
+          user: user ? { ...user, lastSyncedAt: Date.now() } : null,
+          isAuthenticated: !!user,
+          isLoading: false,
+        }),
       
       // Update selected fields on existing user
       updateUser: (updates) => set((state) => {
@@ -57,8 +57,11 @@ export const useUserStore = create<UserState>()(
       signOut: () => set({ 
         user: null, 
         isAuthenticated: false,
-        isLoading: false
+        isLoading: true
       }),
+
+      // Explicitly toggle the loading state
+      setLoading: (isLoading) => set({ isLoading }),
       
       // Set authentication status without changing user
       setAuthStatus: ({ isAuthenticated, isLoading }) => 
@@ -98,7 +101,8 @@ export const useUserStore = create<UserState>()(
             profilePicture: convexUser.image || state.user.profilePicture,
             image: convexUser.image || state.user.image,
             lastSyncedAt: Date.now()
-          }
+          },
+          isLoading: false
         };
       })
     }),

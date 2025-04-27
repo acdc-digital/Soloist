@@ -1,39 +1,33 @@
 // LEFT SIDEBAR
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/sidebar.tsx
 
-// /src/app/dashboard/_components/sidebar.tsx
 "use client";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { useUserStore } from "@/store/userStore";
 import { useSidebarStore } from "@/store/sidebarStore";
 import {
-  AppWindow,
   Search,
   Plus,
   Settings,
-  LogOut,
   ArrowRightToLine,
   ArrowLeftFromLine,
   PersonStanding,
   CircleHelpIcon,
+  ChevronUp,
+  ChevronDown,
+  User,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // Import Stores & Modals
 import { SettingsDialog } from "@/app/settings/SettingsDialog";
 import { useFeedStore } from "@/store/feedStore";
-import { useUserContext } from "@/provider/userContext";  // Add this import
+import { useUserContext } from "@/provider/userContext";
+// Import SignOut component
+import { SignOutWithGitHub } from "@/auth/oath/SignOutWithGitHub";
 
 interface SidebarProps {
   className?: string;
@@ -43,7 +37,9 @@ export function Sidebar({ className }: SidebarProps) {
   // Get user from both sources to ensure we have the most up-to-date info
   const storeUser = useUserStore((state) => state.user);
   const { user: contextUser } = useUserContext();  // Get user from context
-  const signOut = useUserStore((state) => state.signOut);
+  
+  // State for accordion
+  const [accountMenuOpen, setAccountMenuOpen] = React.useState(false);
   
   // Merge user data, preferring contextUser if available
   const user = React.useMemo(() => {
@@ -136,9 +132,14 @@ export function Sidebar({ className }: SidebarProps) {
     console.log("Help action clicked");
   };
   
-  const handleSignOut = () => {
-    signOut();
-    console.log("User signed out");
+  const handleProfileClick = () => {
+    console.log("Profile clicked");
+    setAccountMenuOpen(false);
+  };
+  
+  const handleSettingsClick = () => {
+    handleGoToSettings();
+    setAccountMenuOpen(false);
   };
   
   // Items that show only if expanded
@@ -228,67 +229,94 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
         {/* BOTTOM SECTION */}
         <div className="relative p-2">
-          {/* ACCOUNT DROPDOWN */}
+          {/* ACCOUNT ACCORDION */}
           {!collapsed && (
             <>
               <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40 -mx-2 mt-3" />
-              <div className="mt-3 mb-12">
+              <div className="mt-3 mb-2 relative">
                 <p className="px-2 mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Account
                 </p>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                
+                {/* Account Button */}
+                <Button
+                  variant="ghost"
+                  onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+                  className="w-full py-1.5 px-2 flex items-center justify-between text-left rounded-lg hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
+                >
+                  <div className="flex items-center">
+                    <Avatar className="h-7 w-7 flex-shrink-0 ring-1 ring-offset-1 ring-offset-zinc-50/60 dark:ring-offset-zinc-950/60 ring-zinc-300/50 dark:ring-zinc-700/50">
+                      <AvatarImage
+                        src={user?.profilePicture || user?.image || undefined}
+                        alt={user?.name || "User Avatar"}
+                      />
+                      <AvatarFallback className="bg-zinc-200 text-zinc-700 text-[10px] dark:bg-zinc-800 dark:text-zinc-300 font-medium">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="ml-2.5 overflow-hidden">
+                      <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                        {user?.name || "User Name"}
+                      </p>
+                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        {user?.email || "user@example.com"}
+                      </p>
+                    </div>
+                  </div>
+                  {accountMenuOpen ? (
+                    <ChevronUp className="h-4 w-4 text-zinc-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-zinc-500" />
+                  )}
+                </Button>
+
+                {/* Accordion Content */}
+                <div 
+                  className={cn(
+                    "absolute bottom-full left-0 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg overflow-hidden transition-all duration-200 mb-1",
+                    accountMenuOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+                  )}
+                  style={{ 
+                    transform: accountMenuOpen ? 'translateY(0)' : 'translateY(8px)',
+                    zIndex: 50
+                  }}
+                >
+                  <div className="p-1">
                     <Button
                       variant="ghost"
-                      className="w-full py-1.5 px-2 flex items-center justify-start text-left rounded-lg hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
+                      onClick={handleProfileClick}
+                      className="w-full justify-start px-3 py-2 text-sm font-normal hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 rounded-md"
                     >
-                      <Avatar className="h-7 w-7 flex-shrink-0 ring-1 ring-offset-1 ring-offset-zinc-50/60 dark:ring-offset-zinc-950/60 ring-zinc-300/50 dark:ring-zinc-700/50">
-                        <AvatarImage
-                          src={user?.profilePicture || user?.image || undefined}
-                          alt={user?.name || "User Avatar"}
-                        />
-                        <AvatarFallback className="bg-zinc-200 text-zinc-700 text-[10px] dark:bg-zinc-800 dark:text-zinc-300 font-medium">
-                          {userInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="ml-2.5 overflow-hidden">
-                        <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                          {user?.name || "User Name"}
-                        </p>
-                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                          {user?.email || "user@example.com"}
-                        </p>
-                      </div>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-56">
-                    <DropdownMenuLabel className="text-xs text-zinc-500 dark:text-zinc-400 px-2 pt-1.5 pb-1 font-medium">
-                      My Account
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator className="bg-zinc-300/40 dark:bg-zinc-700/40 mx-1" />
-                    <DropdownMenuItem className="text-sm font-normal focus:bg-zinc-200/60 dark:focus:bg-zinc-800/60 cursor-pointer mx-1 rounded-md">
+                      <User className="mr-2 h-4 w-4 text-zinc-500" />
                       Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-sm font-normal focus:bg-zinc-200/60 dark:focus:bg-zinc-800/60 cursor-pointer mx-1 rounded-md">
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={handleSettingsClick}
+                      className="w-full justify-start px-3 py-2 text-sm font-normal hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 rounded-md"
+                    >
                       <Settings className="mr-2 h-4 w-4 text-zinc-500" />
                       Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-zinc-300/40 dark:bg-zinc-700/40 mx-1" />
-                    <DropdownMenuItem
-                      onClick={handleSignOut}
-                      className="text-sm font-normal focus:bg-red-100/60 dark:focus:bg-red-900/40 text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300 cursor-pointer mx-1 rounded-md"
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    </Button>
+                    <Separator className="my-1 bg-zinc-300/40 dark:bg-zinc-700/40" />
+                    
+                    {/* Using your GitHub SignOut component */}
+                    <div className="px-1">
+                      <SignOutWithGitHub 
+                        variant="ghost" 
+                        className="w-full justify-start text-sm font-normal hover:bg-red-100/60 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-md" 
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           )}
+          {/* Additional padding at bottom */}
+          <div className="h-10"></div>
         </div>
       </div>
-      {/* Our new SettingsDialog component, controlled by local state */}
+      {/* Our SettingsDialog component, controlled by local state */}
       <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </div>
   );

@@ -20,15 +20,26 @@ export function SignOutWithGitHub({
 }: SignOutWithGitHubProps) {
   const { signOut } = useAuthActions();
   
+  const handleSignOut = () => {
+    try {
+      // Call signOut without parameters first
+      signOut();
+      
+      // Then manually redirect using window.location
+      // This happens after the signOut process is complete
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error during sign out:", error);
+    }
+  };
+  
   return (
     <Button
       className={className}
       variant={variant}
       size={size}
       type="button"
-      onClick={() => {
-        void signOut({ redirectTo: "/" });
-      }}
+      onClick={handleSignOut}
     >
       <ExitIcon className="mr-2 h-4 w-4" /> Sign Out
     </Button>

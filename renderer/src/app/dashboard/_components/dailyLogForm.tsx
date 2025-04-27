@@ -1,14 +1,10 @@
-// DAILY LOG FORM
-// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/dailyLogForm.tsx
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { useUser } from "@/hooks/useUser";
-import { getUserId } from "@/utils/userUtils"; // Add the utility
+import { useUserContext } from "@/provider/userContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,21 +29,30 @@ interface DailyLogFormProps {
   date?: string;
 }
 
+/**
+ * Client‑side form for creating/updating a daily log.
+ * Server logic lives in `convex/dailyLogs.ts`.
+ */
 export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
-  const { user } = useUser();
-  // Keep your original direct access but add a fallback to the utility
-  const userId = user?._id?.toString() || getUserId(user);
+  const { user, isLoading: userLoading } = useUserContext();
 
   const effectiveDate = date ?? new Date().toISOString().split("T")[0];
 
-  const existingLog = useQuery(api.dailyLogs.getDailyLog, {
-    userId,
-    date: effectiveDate,
-  });
+  // Current authenticated user ID (GitHub authId or Convex doc id)
+  // Older authIds sometimes have the pattern "<id>|<legacyId>".  Convex expects only the first part.
+  const rawAuthId = user?.authId ?? user?._id ?? user?.id ?? null;
+  const userId =
+    typeof rawAuthId === "string" ? rawAuthId.split("|")[0] : null;
+
+  // Fetch existing log for that date (backend infers user from auth context)
+  const existingLog = useQuery(
+    api.dailyLogs.getDailyLog,
+    userId ? { date: effectiveDate, userId } : undefined        // pass args only when we have a userId
+  );
 
   const dailyLogMutation = useMutation(api.dailyLogs.dailyLog);
-  const scoreDailyLog = useAction(api.score.scoreDailyLog);
-  const generateFeed = useAction(api.feed.generateFeedForDailyLog);
+  const scoreDailyLog   = useAction(api.score.scoreDailyLog);
+  const generateFeed    = useAction(api.feed.generateFeedForDailyLog);
 
   const {
     register,
@@ -69,6 +74,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
     },
   });
 
+  // Populate form if a log already exists
   useEffect(() => {
     if (existingLog?.answers) {
       reset({
@@ -89,21 +95,26 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  if (userLoading || !userId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
   const onSubmit = async (data: DailyLogFormData) => {
-    setError(null);
-    setIsSubmitting(true);
     setError(null);
     setIsSubmitting(true);
 
     try {
       await dailyLogMutation({
-        userId,
         date: effectiveDate,
+        userId,
         answers: data,
-        score: undefined,
       });
-      await scoreDailyLog({ userId, date: effectiveDate });
-      await generateFeed({ userId, date: effectiveDate });
+      await scoreDailyLog({ date: effectiveDate, userId });
+      await generateFeed({ date: effectiveDate, userId });
       onClose();
     } catch (err) {
       console.error("Failed to save daily log:", err);
@@ -124,13 +135,13 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
           {/* Ratings Section */}
           <div className="space-y-3">
             <h3 className="font-medium text-sm text-zinc-700 dark:text-zinc-300">
-              Rate Your Day <span className="text-xs">(1-10)</span>
+              Rate Your Day <span className="text-xs">(1‑10)</span>
             </h3>
             {[
               ["overallMood", "Overall Mood"],
               ["workSatisfaction", "Work Satisfaction"],
               ["personalLifeSatisfaction", "Personal Life"],
-              ["balanceRating", "Work-Life Balance"],
+              ["balanceRating", "Work‑Life Balance"],
             ].map(([field, label]) => (
               <div key={field} className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -207,7 +218,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
                 </Label>
                 <Textarea
                   id={field}
-                  placeholder={placeholder}
+                  placeholder={placeholder as string}
                   className="w-full bg-zinc-50 dark:bg-zinc-800 border dark:border-zinc-700 placeholder:text-zinc-400 focus:ring-emerald-500"
                   {...register(field as any)}
                 />

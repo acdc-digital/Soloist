@@ -97,3 +97,19 @@ export const getLogCount = query({
     return logs.length;
   },
 });
+
+export const listScores = query({
+  args: { userId: v.string() },
+  handler: async ({ db }, { userId }) => {
+    return db
+      .query("logs")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .collect()
+      .then((docs) =>
+        docs.map((d) => ({
+          date: d.date,                 // must be "YYYY-MM-DD"
+          score: d.score ?? null,
+        }))
+      );
+  },
+});

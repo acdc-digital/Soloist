@@ -29,7 +29,8 @@ const schema = defineSchema({
     score: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("byUserDate", ["userId", "date"]),
+  })
+  .index("byUserDate", ["userId", "date"]),
 
   feed: defineTable({
     userId: v.string(),

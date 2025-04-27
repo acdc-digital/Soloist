@@ -15,10 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@/components/ui/tooltip";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { useUser } from "@/hooks/useUser";
-import { useUserStore } from "@/store/userStore";
+import { useUserContext } from "@/provider/userContext";
 
 // Helper component for Loading State
 const LoadingState = ({ message = "Loading..." }: { message?: string }) => (
@@ -117,27 +116,11 @@ const mockInsights = [
 ];
 
 export default function SoloistPage() {
-  // Get user data - but we won't block based on this
-  const { user: convexUser, isLoading } = useUser();
-  const storeUser = useUserStore((state) => state.user);
-  const setStoreUser = useUserStore((state) => state.setUser);
-  
-  // QUICK FIX: Use an empty string as fallback which will work with your current DB
-  // This matches logs with empty user IDs
-  const userId = convexUser?._id?.toString() || storeUser?.id || "";
-  
-  // Keep user store in sync - this is still helpful for future consistency
-  useEffect(() => {
-    if (convexUser && convexUser._id) {
-      console.log("[SoloistPage] Syncing user to store:", convexUser._id.toString());
-      setStoreUser({
-        id: convexUser._id.toString(),
-        name: convexUser.name || "",
-        email: convexUser.email || "",
-        profilePicture: convexUser.imageUrl,
-      });
-    }
-  }, [convexUser, setStoreUser]);
+  // Single source‑of‑truth user (from Zustand context)
+  const { user, isLoading: userLoading } = useUserContext();
+  const rawAuthId = user?.authId ?? user?._id ?? user?.id ?? null;
+  const userId =
+    typeof rawAuthId === "string" ? rawAuthId.split("|")[0] : null;
   
   const [selectedDayIndex, setSelectedDayIndex] = useState(3);
   const [isGeneratingForecast, setIsGeneratingForecast] = useState(false);
@@ -145,7 +128,10 @@ export default function SoloistPage() {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   // Fetch forecast data - will run even with empty userId
-  const forecastData = useQuery(api.forecast.getSevenDayForecast, { userId });
+  const forecastData = useQuery(
+    api.forecast.getSevenDayForecast,
+    userId ? { userId } : undefined
+  );
 
   // Generate forecast mutation
   const generateForecast = useAction(api.forecast.generateForecast);
@@ -185,7 +171,6 @@ export default function SoloistPage() {
   const handleGenerateForecast = () => {
     setForecastError(null);
     setIsGeneratingForecast(true);
-    
     generateForecast({ userId })
       .then(result => {
         console.log("[SoloistPage] Generation result:", result);
@@ -202,9 +187,9 @@ export default function SoloistPage() {
       });
   };
 
-  // QUICK FIX: Only check for loading, don't check for authentication!
-  if (isLoading) {
-    return <LoadingState message="Loading..." />;
+  // Loading guard for user
+  if (userLoading || !userId) {
+    return <LoadingState message="Loading user…" />;
   }
 
   // Wait for forecast data

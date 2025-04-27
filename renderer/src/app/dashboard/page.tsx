@@ -27,6 +27,9 @@ import { RightSidebar } from "./_components/RightSidebar";
 import SoloistPage from "./soloist/page";
 import { Loader2 } from "lucide-react";
 
+// Responsive breakpoint for auto-collapse in pixels
+const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1256;
+
 export default function Dashboard() {
   const { user } = useUser();
   const setStoreUser = useUserStore((state) => state.setUser);
@@ -70,7 +73,40 @@ export default function Dashboard() {
     setStoreUser(prev => {
       return shallowEqual(prev, next) ? prev : next;
     });
-    }, [user, setStoreUser]);
+  }, [user, setStoreUser]);
+
+  // NEW: Responsive sidebar handler
+  useEffect(() => {
+    // Initial check on mount
+    const checkWidth = () => {
+      if (window.innerWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH && sidebarOpen) {
+        // Auto-collapse left sidebar when right sidebar is open and viewport is narrow
+        setCollapsed(true);
+      } else if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH && sidebarOpen) {
+        // Restore left sidebar when enough space
+        setCollapsed(false);
+      }
+    };
+
+    // Check initially
+    checkWidth();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkWidth);
+    
+    // Clean up event listener on unmount
+    return () => {
+      window.removeEventListener('resize', checkWidth);
+    };
+  }, [sidebarOpen, setCollapsed]); // Re-run when right sidebar state changes
+
+  // Additional effect to handle right sidebar opening/closing
+  useEffect(() => {
+    if (sidebarOpen && window.innerWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH) {
+      // When right sidebar opens and viewport is narrow, collapse left sidebar
+      setCollapsed(true);
+    }
+  }, [sidebarOpen, setCollapsed]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -110,6 +146,11 @@ export default function Dashboard() {
     setSelectedDate(dateString);
     setActiveTab("log");
     setSidebarOpen(true);
+    
+    // Auto-collapse left sidebar if viewport is narrow
+    if (window.innerWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH) {
+      setCollapsed(true);
+    }
   };
 
   // Example formatting for 'Daily Log Form' title
@@ -150,8 +191,7 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 overflow-auto px-3 pb-2">
               <Heatmap
-                dailyLogs={dailyLogs}
-                year={selectedYear}
+                year={parseInt(selectedYear)}
                 onSelectDate={handleSelectDate}
               />
             </div>
@@ -163,6 +203,11 @@ export default function Dashboard() {
             onClose={() => {
               toggleSidebar();
               setSelectedDate(null);
+              
+              // When closing right sidebar, check if we should restore left sidebar
+              if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH) {
+                setCollapsed(false);
+              }
             }}
             title={renderLogTitle()}
           >
@@ -172,6 +217,11 @@ export default function Dashboard() {
                   onClose={() => {
                     toggleSidebar();
                     setSelectedDate(null);
+                    
+                    // When closing right sidebar, check if we should restore left sidebar
+                    if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH) {
+                      setCollapsed(false);
+                    }
                   }}
                   date={selectedDate}
                 />

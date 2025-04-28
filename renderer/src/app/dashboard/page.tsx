@@ -35,7 +35,7 @@ export default function Dashboard() {
   const setStoreUser = useUserStore((state) => state.setUser);
   const { setCollapsed, currentView } = useSidebarStore();
 
-  // Our feed store: if 'sidebarOpen' is true, the feed is open
+  // Feed-related store
   const {
     sidebarOpen,
     toggleSidebar,
@@ -46,7 +46,9 @@ export default function Dashboard() {
     setSidebarOpen,
   } = useFeedStore();
 
-  // Keep user store in sync - this looks good already
+  /* ───────────────────────────────────────────── */
+  /*  Sync user from Convex → Zustand store        */
+  /* ───────────────────────────────────────────── */
   useEffect(() => {
     if (user) {
       setStoreUser({
@@ -58,52 +60,43 @@ export default function Dashboard() {
     }
   }, [user, setStoreUser]);
 
-  // Second effect: auto-collapse left sidebar if (window < 1256) & feed is open
+  /*  Update store only if changed (shallow)       */
   useEffect(() => {
-    if (!user) return;                    // still loading
-  
+    if (!user) return;
+
     const next = {
-      id:   user._id?.toString() ?? "",
-      name: user.name        ?? "",
-      email: user.email      ?? "",
+      id: user._id?.toString() ?? "",
+      name: user.name ?? "",
+      email: user.email ?? "",
       profilePicture: user.imageUrl,
     };
-  
-    // Functional update: we get the *current* store value
-    setStoreUser(prev => {
-      return shallowEqual(prev, next) ? prev : next;
-    });
+
+    setStoreUser((prev) => (shallowEqual(prev, next) ? prev : next));
   }, [user, setStoreUser]);
 
-  // NEW: Responsive sidebar handler
+  /* ───────────────────────────────────────────── */
+  /*  Responsive left-sidebar auto-collapse        */
+  /* ───────────────────────────────────────────── */
   useEffect(() => {
-    // Initial check on mount
     const checkWidth = () => {
       if (window.innerWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH && sidebarOpen) {
-        // Auto-collapse left sidebar when right sidebar is open and viewport is narrow
         setCollapsed(true);
-      } else if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH && sidebarOpen) {
-        // Restore left sidebar when enough space
+      } else if (
+        window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH &&
+        sidebarOpen
+      ) {
         setCollapsed(false);
       }
     };
 
-    // Check initially
-    checkWidth();
-    
-    // Add event listener for window resize
-    window.addEventListener('resize', checkWidth);
-    
-    // Clean up event listener on unmount
-    return () => {
-      window.removeEventListener('resize', checkWidth);
-    };
-  }, [sidebarOpen, setCollapsed]); // Re-run when right sidebar state changes
+    checkWidth(); // initial
+    window.addEventListener("resize", checkWidth);
+    return () => window.removeEventListener("resize", checkWidth);
+  }, [sidebarOpen, setCollapsed]);
 
-  // Additional effect to handle right sidebar opening/closing
+  // Collapse left sidebar when right sidebar opens on narrow viewports
   useEffect(() => {
     if (sidebarOpen && window.innerWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH) {
-      // When right sidebar opens and viewport is narrow, collapse left sidebar
       setCollapsed(true);
     }
   }, [sidebarOpen, setCollapsed]);
@@ -113,20 +106,19 @@ export default function Dashboard() {
     useUserStore.getState().signOut();
   };
 
-  // Year Selection
+  /* ───────────────────────────────────────────── */
+  /*  Heatmap year selector                        */
+  /* ───────────────────────────────────────────── */
   const [selectedYear, setSelectedYear] = React.useState("2025");
-  
-  // Use getUserId utility instead of direct access
   const userId = getUserId(user);
 
-  // Query logs (only needed for dashboard view)
+  /*  Fetch daily logs (dashboard view only)       */
   const dailyLogs = useQuery(
-    api.dailyLogs.listDailyLogs, 
+    api.dailyLogs.listDailyLogs,
     { userId, year: selectedYear },
-    { enabled: currentView === "dashboard" && !!userId } // Only query when in dashboard view and userId exists
+    { enabled: currentView === "dashboard" && !!userId }
   );
 
-  // If we're in dashboard view and data is loading
   if (currentView === "dashboard" && !dailyLogs) {
     return (
       <div className="flex h-full">
@@ -141,54 +133,81 @@ export default function Dashboard() {
     );
   }
 
-  // If a day is clicked in Heatmap
+  /* ───────────────────────────────────────────── */
+  /*  Handlers                                     */
+  /* ───────────────────────────────────────────── */
   const handleSelectDate = (dateString: string) => {
     setSelectedDate(dateString);
     setActiveTab("log");
     setSidebarOpen(true);
-    
-    // Auto-collapse left sidebar if viewport is narrow
+
     if (window.innerWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH) {
       setCollapsed(true);
     }
   };
 
-  // Example formatting for 'Daily Log Form' title
-  function renderLogTitle() {
-    if (activeTab !== "log") return "Feed";
-    if (!selectedDate) return "Daily Log Form";
-
-    const parsed = parseISO(selectedDate);
-    const formatted = format(parsed, "MMM d, yyyy");
-    return (
-      <div className="flex flex-col">
-        <span className="font-semibold">Daily Log Form</span>
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">
-          {formatted}
-        </span>
-      </div>
-    );
-  }
-
   function handleYearChange(newYear: string) {
     setSelectedYear(newYear);
   }
 
+  /* ───────────────────────────────────────────── */
+  /*  Sidebar title builder                        */
+  /* ───────────────────────────────────────────── */
+  function renderSidebarTitle() {
+    // Daily Log
+    if (activeTab === "log") {
+      if (!selectedDate) return "Daily Log Form";
+      const parsed = parseISO(selectedDate);
+      const formatted = format(parsed, "MMM d, yyyy");
+      return (
+        <div className="flex flex-col">
+          <span className="font-semibold">Daily Log Form</span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            {formatted}
+          </span>
+        </div>
+      );
+    }
+
+    // Feed
+    if (activeTab === "feed") {
+      if (!selectedDate) return "Feed";
+      const parsed = parseISO(selectedDate);
+      const formatted = format(parsed, "MMM d, yyyy");
+      return (
+        <div className="flex flex-col">
+          <span className="font-semibold">Feed</span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            {formatted}
+          </span>
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  /* ───────────────────────────────────────────── */
+  /*  Render                                       */
+  /* ───────────────────────────────────────────── */
   return (
     <div className="flex h-full bg-white dark:bg-zinc-900">
       {/* Left sidebar */}
       <Sidebar />
 
-      {/* Main content - conditionally render based on current view */}
+      {/* Main content */}
       {currentView === "dashboard" ? (
         <>
           <main className="flex-1 flex flex-col relative">
+            {/* Year controls */}
             <div className="sticky top-0 z-10 px-4 mt-2 mb-2">
               <Controls
                 selectedYear={selectedYear}
                 onYearChange={handleYearChange}
               />
             </div>
+
+            {/* Heatmap */}
             <div className="flex-1 overflow-auto px-3 pb-2">
               <Heatmap
                 year={parseInt(selectedYear)}
@@ -197,33 +216,29 @@ export default function Dashboard() {
             </div>
           </main>
 
-          {/* Right sidebar for dashboard view */}
+          {/* Right sidebar */}
           <RightSidebar
             open={sidebarOpen}
+            title={renderSidebarTitle()}
             onClose={() => {
               toggleSidebar();
               setSelectedDate(null);
-              
-              // When closing right sidebar, check if we should restore left sidebar
               if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH) {
                 setCollapsed(false);
               }
             }}
-            title={renderLogTitle()}
           >
             {activeTab === "log" ? (
               selectedDate ? (
                 <DailyLogForm
+                  date={selectedDate}
                   onClose={() => {
                     toggleSidebar();
                     setSelectedDate(null);
-                    
-                    // When closing right sidebar, check if we should restore left sidebar
                     if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH) {
                       setCollapsed(false);
                     }
                   }}
-                  date={selectedDate}
                 />
               ) : (
                 <div className="p-4 text-sm text-zinc-500">
@@ -238,7 +253,7 @@ export default function Dashboard() {
           </RightSidebar>
         </>
       ) : (
-        // Soloist view
+        /* Soloist view */
         <main className="flex-1 overflow-hidden">
           <SoloistPage />
         </main>

@@ -1,9 +1,3 @@
-// HEATMAP CALENDAR
-// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/Heatmap.tsx
-
-// HEATMAP CALENDAR (self-fetching, stable-hooks)
-// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/Heatmap.tsx
-
 "use client";
 
 import * as React from "react";
@@ -44,21 +38,21 @@ const buildDateKey = (d: Date) =>
     d.getDate()
   ).padStart(2, "0")}`;
 
-  const getAllDatesInYear = (year: number) => {
-    const arr: Date[] = [];
-    // Create a new date for each iteration to avoid mutation issues
-    for (let month = 0; month < 12; month++) {
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      for (let day = 1; day <= daysInMonth; day++) {
-        arr.push(new Date(year, month, day));
-      }
+const getAllDatesInYear = (year: number) => {
+  const arr: Date[] = [];
+  // Create a new date for each iteration to avoid mutation issues
+  for (let month = 0; month < 12; month++) {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      arr.push(new Date(year, month, day));
     }
-    return arr;
-  };
+  }
+  return arr;
+};
 
 const getColorClass = (s: number | null | undefined) =>
   s == null
-    ? "bg-zinc-300/40 border border-zinc-400/60 dark:bg-zinc-800/30 dark:border-zinc-700/50"
+    ? "bg-zinc-200/30 border border-zinc-300/50 dark:bg-zinc-800/20 dark:border-zinc-700/40"
     : s >= 90
     ? "bg-indigo-400/90 hover:bg-indigo-400"
     : s >= 80
@@ -115,7 +109,7 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
     userId ? { userId } : "skip"
   ); // undefined while loading, then DailyLog[]
 
-  /* 3. Derived “ready” flag & safe array (keeps hook order stable) */
+  /* 3. Derived "ready" flag & safe array (keeps hook order stable) */
   const ready = !authLoading && userId && queryResult !== undefined;
   const dailyLogs: DailyLog[] = queryResult ?? [];
 
@@ -126,7 +120,7 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
     return m;
   }, [dailyLogs]);
 
-  /* 5. Stats & date helpers    — pure calculations */
+  /* 5. Stats & date helpers — pure calculations */
   const totalLogs = dailyLogs.length;
   const avg =
     dailyLogs.reduce((sum, l) => sum + (l.score ?? 0), 0) / Math.max(1, totalLogs);
@@ -143,6 +137,13 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
     onSelectDate?.(d);
     setSelectedDate(d);
   };
+
+  /* For debugging */
+  React.useEffect(() => {
+    console.log(`Calendar dates generated: ${allDates.length}`);
+    console.log(`First date: ${allDates[0]?.toISOString()}`);
+    console.log(`Last date: ${allDates[allDates.length - 1]?.toISOString()}`);
+  }, [allDates]);
 
   /* ─────────────── Render ─────────────── */
   return (
@@ -179,12 +180,13 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
       </div>
 
       {/* Calendar grid */}
-      <div className="flex-1 min-h-0 border border-zinc-200 dark:border-zinc-700 rounded-md mx-0">
+      <div className="flex-1 min-h-0 border border-zinc-200 dark:border-zinc-700 bg-zinc-50/70 dark:bg-zinc-900/50 rounded-md mx-0">
         <ScrollArea className="h-full">
-          <div className="flex flex-wrap gap-0.75 p-3">
+          <div className="flex flex-wrap gap-1 p-3">
             {allDates.map((d) => {
               const key = buildDateKey(d);
-              const score = logMap.get(key)?.score ?? null;
+              const log = logMap.get(key);
+              const score = log?.score ?? null;
 
               const show =
                 hover === null ||
@@ -199,19 +201,16 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
                   className={`
                     flex items-center justify-center
                     w-6 h-6 rounded-sm cursor-pointer
-                    text-[10px] font-semibold transition-all duration-150
+                    text-[10px] font-medium transition-all duration-150
                     ${getColorClass(score)}
                     ${show ? "" : "opacity-30"}
-                    ${isToday ? "ring ring-red-600 dark:ring-zinc-300" : ""}
-                    ${selectedDate === key ? "ring ring-blue-600" : ""}
+                    ${isToday ? "ring-1 ring-red-600 dark:ring-zinc-300" : ""}
+                    ${selectedDate === key ? "ring-1 ring-blue-600" : ""}
+                    text-zinc-800/90 dark:text-zinc-100/90
                   `}
-                  style={{ outline: "1px solid rgba(0,0,0,.05)" }}
+                  style={{ outline: "0.5px solid rgba(0,0,0,0.1)" }}
                 >
-                  {score !== null && score >= 50 ? (
-                    <span className="text-zinc-900">{d.getDate()}</span>
-                  ) : (
-                    <span className="text-zinc-100">{d.getDate()}</span>
-                  )}
+                  {d.getDate()}
                 </div>
               );
             })}

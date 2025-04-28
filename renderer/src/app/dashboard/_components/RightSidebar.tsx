@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, GripVertical } from "lucide-react";
 import { initResize } from "@/lib/resizer";
 
 interface RightSidebarProps {
@@ -24,6 +24,7 @@ export function RightSidebar({
   const [width, setWidth] = useState(320);
   const MIN_WIDTH = 240;
   const MAX_WIDTH = 500;
+  const [isResizeHovered, setIsResizeHovered] = useState(false);
 
   // If not open, width = 0 hides the panel
   const actualWidth = open ? width : 0;
@@ -46,17 +47,54 @@ export function RightSidebar({
       }}
       className={`
         relative flex-shrink-0 h-full
-        bg-white dark:bg-zinc-900 shadow-lg
-        border-l border-zinc-200 dark:border-zinc-700
+        bg-white dark:bg-zinc-900
+        border-l ${isResizeHovered 
+          ? "border-l-zinc-400 dark:border-l-zinc-500" 
+          : "border-l-zinc-200 dark:border-l-zinc-700"}
+        transition-colors duration-150
         ${open ? "opacity-100" : "opacity-0 overflow-hidden"}
       `}
     >
+      {/* Drag handle */}
+      {open && (
+        <div 
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-50 -translate-x-[6px]"
+          aria-hidden="true"
+          onMouseEnter={() => setIsResizeHovered(true)}
+          onMouseLeave={() => setIsResizeHovered(false)}
+        >
+          <div
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleMouseDown as any}
+            className={`
+              flex flex-col items-center justify-center cursor-col-resize 
+              w-[14px] h-12 rounded-md
+              bg-white dark:bg-zinc-800
+              border transition-colors duration-150
+              ${isResizeHovered 
+                ? "border-zinc-400 dark:border-zinc-500" 
+                : "border-zinc-300 dark:border-zinc-600"}
+              hover:bg-zinc-100 dark:hover:bg-zinc-700
+              active:bg-zinc-200 dark:active:bg-zinc-600
+              shadow-sm
+            `}
+          >
+            <div className="flex flex-col items-center justify-center h-full">
+              <GripVertical className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Left border hover detector (invisible) */}
       {open && (
         <div
+          onMouseEnter={() => setIsResizeHovered(true)}
+          onMouseLeave={() => setIsResizeHovered(false)}
           onMouseDown={handleMouseDown}
           onTouchStart={handleMouseDown as any}
-          className="absolute left-0 top-0 h-full w-2 cursor-col-resize z-50
-                     hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          className="absolute left-0 top-0 h-full w-1 cursor-col-resize z-40"
+          style={{ backgroundColor: 'transparent' }}
         />
       )}
 

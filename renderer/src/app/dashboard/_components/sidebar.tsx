@@ -17,6 +17,7 @@ import {
   ChevronUp,
   ChevronDown,
   User,
+  Calendar,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,17 @@ export function Sidebar({ className }: SidebarProps) {
     
     console.log("Soloist action clicked");
   };
+
+  const handleCalendar = () => {
+    // Switch to Dashboard/Calendar view
+    setView("dashboard");
+    
+    // Close the right sidebar if it's open
+    const { setSidebarOpen } = useFeedStore.getState();
+    setSidebarOpen(false);
+    
+    console.log("Calendar action clicked");
+  };
   
   const handleGoTohelp = () => {
     console.log("Help action clicked");
@@ -145,7 +157,8 @@ export function Sidebar({ className }: SidebarProps) {
   // Items that show only if expanded
   const mainActions = [
     { id: "soloist",  label: "Soloist",        icon: PersonStanding,  action: handleSoloist, active: currentView === "soloist" },
-    { id: "new-log",  label: "Create New Log", icon: Plus,            action: handleCreateNewLog, active: currentView === "dashboard" },
+    { id: "calendar", label: "Calendar",       icon: Calendar,        action: handleCalendar, active: currentView === "dashboard" },
+    { id: "new-log",  label: "Create New Log", icon: Plus,            action: handleCreateNewLog, active: false },
     { id: "settings", label: "Settings",       icon: Settings,        action: handleGoToSettings },
     { id: "help",     label: "Help",           icon: CircleHelpIcon,  action: handleGoTohelp },
   ];

@@ -1,3 +1,6 @@
+// DAILY LOG FORM
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/dailyLogForm.tsx
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -11,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { useFeedStore } from "@/store/feedStore";
 
 interface DailyLogFormData {
   overallMood: number;
@@ -25,7 +29,7 @@ interface DailyLogFormData {
 }
 
 interface DailyLogFormProps {
-  onClose: () => void;
+  onClose: () => void; // still used for cancel button
   date?: string;
 }
 
@@ -36,23 +40,28 @@ interface DailyLogFormProps {
 export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   const { user, isLoading: userLoading } = useUserContext();
 
+  /* ────────────────────────────────────────── */
+  /* Feed store hooks                           */
+  /* ────────────────────────────────────────── */
+  const setActiveTab     = useFeedStore((s) => s.setActiveTab);
+  const setSidebarOpen   = useFeedStore((s) => s.setSidebarOpen);
+  const setSelectedDate  = useFeedStore((s) => s.setSelectedDate);
+
   const effectiveDate = date ?? new Date().toISOString().split("T")[0];
 
-  // Current authenticated user ID (GitHub authId or Convex doc id)
-  // Older authIds sometimes have the pattern "<id>|<legacyId>".  Convex expects only the first part.
+  // Current authenticated user ID
   const rawAuthId = user?.authId ?? user?._id ?? user?.id ?? null;
-  const userId =
-    typeof rawAuthId === "string" ? rawAuthId.split("|")[0] : null;
+  const userId = typeof rawAuthId === "string" ? rawAuthId.split("|")[0] : null;
 
-  // Fetch existing log for that date (backend infers user from auth context)
+  // Fetch existing log for the day
   const existingLog = useQuery(
     api.dailyLogs.getDailyLog,
-    userId ? { date: effectiveDate, userId } : undefined        // pass args only when we have a userId
+    userId ? { date: effectiveDate, userId } : undefined
   );
 
   const dailyLogMutation = useMutation(api.dailyLogs.dailyLog);
-  const scoreDailyLog   = useAction(api.score.scoreDailyLog);
-  const generateFeed    = useAction(api.feed.generateFeedForDailyLog);
+  const scoreDailyLog    = useAction(api.score.scoreDailyLog);
+  const generateFeed     = useAction(api.feed.generateFeedForDailyLog);
 
   const {
     register,
@@ -74,14 +83,15 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
     },
   });
 
-  // Populate form if a log already exists
+  /* ────────────────────────────────────────── */
+  /* Populate defaults when a log already exists */
+  /* ────────────────────────────────────────── */
   useEffect(() => {
     if (existingLog?.answers) {
       reset({
         overallMood: existingLog.answers.overallMood ?? 5,
         workSatisfaction: existingLog.answers.workSatisfaction ?? 5,
-        personalLifeSatisfaction:
-          existingLog.answers.personalLifeSatisfaction ?? 5,
+        personalLifeSatisfaction: existingLog.answers.personalLifeSatisfaction ?? 5,
         balanceRating: existingLog.answers.balanceRating ?? 5,
         sleep: existingLog.answers.sleep ?? 7,
         exercise: existingLog.answers.exercise ?? false,
@@ -92,6 +102,9 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
     }
   }, [existingLog, reset]);
 
+  /* ────────────────────────────────────────── */
+  /* Local state                               */
+  /* ────────────────────────────────────────── */
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,19 +116,22 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
     );
   }
 
+  /* ────────────────────────────────────────── */
+  /* Form submit handler                       */
+  /* ────────────────────────────────────────── */
   const onSubmit = async (data: DailyLogFormData) => {
     setError(null);
     setIsSubmitting(true);
 
     try {
-      await dailyLogMutation({
-        date: effectiveDate,
-        userId,
-        answers: data,
-      });
+      await dailyLogMutation({ date: effectiveDate, userId, answers: data });
       await scoreDailyLog({ date: effectiveDate, userId });
       await generateFeed({ date: effectiveDate, userId });
-      onClose();
+
+      /* ───── Switch the sidebar to Feed view ───── */
+      setSelectedDate(effectiveDate);
+      setActiveTab("feed");
+      setSidebarOpen(true);
     } catch (err) {
       console.error("Failed to save daily log:", err);
       setError(err instanceof Error ? err.message : "Failed to save log");
@@ -124,6 +140,9 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
     }
   };
 
+  /* ────────────────────────────────────────── */
+  /* UI                                        */
+  /* ────────────────────────────────────────── */
   return (
     <div className="flex flex-col h-full bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 overflow-x-hidden">
       <ScrollArea className="flex-1 overflow-x-hidden px-3 py-2">
@@ -208,9 +227,17 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
               Quick Reflections
             </h3>
             {[
-              ["highlights", "Today's highlight", "What was the best part of your day?"],
+              [
+                "highlights",
+                "Today's highlight",
+                "What was the best part of your day?",
+              ],
               ["challenges", "Today's challenge", "What was challenging?"],
-              ["tomorrowGoal", "Tomorrow's focus", "What's your main focus for tomorrow?"],
+              [
+                "tomorrowGoal",
+                "Tomorrow's focus",
+                "What's your main focus for tomorrow?",
+              ],
             ].map(([field, label, placeholder]) => (
               <div key={field} className="space-y-1.5">
                 <Label htmlFor={field} className="text-sm">

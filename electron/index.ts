@@ -2,6 +2,7 @@
 // /Users/matthewsimon/Documents/Github/electron-nextjs/electron/index.ts
 
 import { app, BrowserWindow } from "electron";
+import 'dotenv/config';
 
 function createWindow() {
   const win = new BrowserWindow({

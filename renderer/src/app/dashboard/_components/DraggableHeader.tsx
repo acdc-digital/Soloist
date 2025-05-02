@@ -2,6 +2,7 @@
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/DraggableHeader.tsx
 
 import React from "react";
+import { ThemeToggle } from "./themeToggle";
 
 const DraggableHeader: React.FC = () => {
   return (
@@ -14,6 +15,7 @@ const DraggableHeader: React.FC = () => {
       </div>
       {/* Interactive elements go in a no-drag region */}
       <div style={{ WebkitAppRegion: "no-drag" }}>
+      <ThemeToggle />
         {/* e.g., min/max/close buttons or other controls */}
       </div>
     </div>

@@ -40,3 +40,13 @@ flowchart LR
     DB -->|"4. User ID"| State
     State -->|"5. Access"| Features
 ```
+
+### Convex Function Types – Quick Reference
+
+| Function Type | Modifies DB | Reads DB | External Calls | HTTP Callable (`runFunction`) | Client-side Usage (e.g. `useMutation`) | Analogy          |
+|---------------|-------------|----------|----------------|-------------------------------|----------------------------------------|------------------|
+| `mutation()`  | ✅           | ❌       | ❌              | ❌                            | ✅                                     | `POST`, `PUT`    |
+| `query()`     | ❌           | ✅       | ❌              | ❌                            | ✅                                     | `GET`            |
+| `action()`    | ❌           | ❌       | ✅              | ❌                            | ✅                                     | Background Task  |
+| `httpAction()`<br/>(used with `runFunction`) | Optional     | Optional | ✅              | ✅                            | ❌                                     | REST Endpoint    |
+

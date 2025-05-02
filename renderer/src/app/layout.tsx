@@ -4,6 +4,7 @@
 import { ConvexClientProvider } from "@/provider/ConvexClientProvider";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { UserProvider } from "@/provider/userContext";
+import { ThemeProvider } from "@/provider/ThemeProvider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -29,7 +30,14 @@ export default function RootLayout({
           <ConvexClientProvider>
             {/* Wrap children in our UserProvider to provide user context */}
             <UserProvider>
-              <main className="min-h-screen">{children}</main>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <main className="min-h-screen">{children}</main>
+              </ThemeProvider>
             </UserProvider>
           </ConvexClientProvider>
         </body>

@@ -53,6 +53,14 @@ const schema = defineSchema({
   })
   .index("byUserDate", ["userId", "date"]),
 
+  comments: defineTable({
+    feedId: v.id("feeds"),
+    userId: v.string(),
+    userName: v.string(),
+    userImage: v.optional(v.string()),
+    content: v.string(),
+  })
+
   // other tables...
 });
 

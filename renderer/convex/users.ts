@@ -33,6 +33,30 @@ export const getUser = query({
   },
 });
 
+// Add getMe function for comment system
+export const getMe = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    
+    const user = await ctx.db
+      .query("users")
+      .withIndex("byAuthId", (q) => q.eq("authId", userId.split("|")[0]))
+      .first();
+    
+    if (!user) return null;
+    
+    // Return user in the format expected by the comment system
+    return {
+      id: user._id,
+      name: user.name || null,
+      email: user.email || null,
+      imageUrl: user.image || null
+    };
+  },
+});
+
 /* ────────────────────────────────────────────────────────── */
 /*  mutation: upsertUser                                      */
 /* ────────────────────────────────────────────────────────── */

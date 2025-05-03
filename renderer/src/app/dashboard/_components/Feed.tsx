@@ -1,4 +1,5 @@
 // FEED
+// /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/src/app/dashboard/_components/Feed.tsx
 
 "use client";
 
@@ -20,8 +21,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { CommentSection } from "./CommentSection";
+import { useComments } from "@/hooks/useComments"
 
-export default function Feed() {
+type FeedCardProps = {
+  id: string
+  title: string
+  summary: string
+  feedback?: string
+  createdAt: Date
+  // Add other props as needed
+}
+
+export default function Feed({ id, title, summary, feedback, createdAt }: FeedCardProps) {
   const {
     selectedDate,
     setFeedMessages,
@@ -33,6 +45,8 @@ export default function Feed() {
 
   // State for feedback
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, "liked" | "disliked" | null>>({});
+  // State for feedback
+  const { comments, isLoading, addComment } = useComments(id)
 
   /* ───────────────────────────────────────────── */
   /* 1 Resolve the current user's stable ID        */
@@ -142,7 +156,7 @@ export default function Feed() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-0">
         {filteredMessages.length > 0 ? (
           <div className="space-y-4">
             {filteredMessages.map((msg) => (
@@ -181,7 +195,6 @@ export default function Feed() {
                       <ThumbsDown className="h-3 w-3" />
                     </Button>
                   </div>
-                  
                   <div className="flex items-center">
                     <Info className="h-3 w-3 mr-1" />
                     {formatDistanceToNow(new Date(msg.createdAt), {
@@ -189,6 +202,11 @@ export default function Feed() {
                     })}
                   </div>
                 </CardFooter>
+                <CommentSection
+                  feedId={id}
+                  initialComments={comments}
+                  onAddComment={addComment}
+                />
               </Card>
             ))}
           </div>

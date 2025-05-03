@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as auth from "../auth.js";
+import type * as comments from "../comments.js";
 import type * as dailyLogs from "../dailyLogs.js";
 import type * as feed from "../feed.js";
 import type * as forecast from "../forecast.js";
@@ -33,6 +34,7 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  comments: typeof comments;
   dailyLogs: typeof dailyLogs;
   feed: typeof feed;
   forecast: typeof forecast;

@@ -193,3 +193,64 @@ export const storeFeedMessage = mutation({
     });
   },
 });
+
+/**
+ * Add a comment directly to a feed document
+ */
+export const addComment = mutation({
+  args: {
+    feedId: v.id("feed"),
+    userId: v.string(),
+    userName: v.string(),
+    userImage: v.optional(v.string()),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { feedId, userId, userName, userImage, content } = args;
+    
+    // Get the feed document
+    const feed = await ctx.db.get(feedId);
+    
+    // If feed doesn't exist, throw error
+    if (!feed) {
+      throw new Error("Feed not found");
+    }
+    
+    // Create the new comment object
+    const newComment = {
+      userId,
+      userName,
+      userImage,
+      content,
+      createdAt: Date.now(),
+    };
+    
+    // Append to existing comments array or create a new array
+    const comments = feed.comments || [];
+    
+    // Update the feed document with the new comment
+    await ctx.db.patch(feedId, {
+      comments: [...comments, newComment],
+    });
+    
+    return true;
+  },
+});
+
+/**
+ * Get all comments for a specific feed document
+ */
+export const getComments = query({
+  args: {
+    feedId: v.id("feed"),
+  },
+  handler: async (ctx, args) => {
+    const feed = await ctx.db.get(args.feedId);
+    
+    if (!feed || !feed.comments) {
+      return [];
+    }
+    
+    return feed.comments;
+  },
+});

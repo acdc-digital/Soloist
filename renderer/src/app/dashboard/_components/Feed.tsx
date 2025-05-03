@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { useFeedStore } from "@/store/feedStore";
 import { useUserContext } from "@/provider/userContext";
 import { formatDistanceToNow } from "date-fns";
@@ -22,18 +23,18 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CommentSection } from "./CommentSection";
-import { useComments } from "@/hooks/useComments"
 
-type FeedCardProps = {
-  id: string
-  title: string
-  summary: string
-  feedback?: string
-  createdAt: Date
-  // Add other props as needed
-}
+// Define Comment type locally to reduce dependencies
+type Comment = {
+  id: string;
+  userId: string;
+  userName: string;
+  userImage?: string;
+  content: string;
+  createdAt: Date;
+};
 
-export default function Feed({ id, title, summary, feedback, createdAt }: FeedCardProps) {
+export default function Feed() {
   const {
     selectedDate,
     setFeedMessages,
@@ -45,8 +46,13 @@ export default function Feed({ id, title, summary, feedback, createdAt }: FeedCa
 
   // State for feedback
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, "liked" | "disliked" | null>>({});
-  // State for feedback
-  const { comments, isLoading, addComment } = useComments(id)
+  // We'll set these once we have a filtered message
+  const [feedId, setFeedId] = useState<string | null>(null);
+  const [localComments, setLocalComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+
+  // Direct mutation to add a comment to a feed document
+  const updateFeedWithComment = useMutation(api.feed.addComment);
 
   /* ───────────────────────────────────────────── */
   /* 1 Resolve the current user's stable ID        */
@@ -126,6 +132,77 @@ export default function Feed({ id, title, summary, feedback, createdAt }: FeedCa
     // }
   };
 
+  // Query to get comments directly
+  const fetchFeedComments = useQuery(
+    api.feed.getComments,
+    feedId ? { feedId: feedId as Id<"feed"> } : "skip"
+  );
+
+  // Set the feed ID based on the selected message
+  useEffect(() => {
+    if (filteredMessages && filteredMessages.length > 0) {
+      // Use the first message's ID for the selected date
+      const messageId = filteredMessages[0]._id;
+      console.log("Setting feed ID from filtered message:", messageId);
+      setFeedId(messageId);
+    } else {
+      setFeedId(null);
+    }
+  }, [filteredMessages]);
+
+  // Load comments when feedId changes or when fetchFeedComments updates
+  useEffect(() => {
+    if (fetchFeedComments) {
+      console.log("Got comments from backend:", fetchFeedComments);
+      // Transform the data to match our Comment type
+      const formattedComments = fetchFeedComments.map((comment: any, index: number) => ({
+        id: `${feedId}_${index}`,
+        userId: comment.userId,
+        userName: comment.userName,
+        userImage: comment.userImage,
+        content: comment.content,
+        createdAt: new Date(comment.createdAt)
+      }));
+      setComments(formattedComments);
+      // Clear local comments since they should now be included in the fetched comments
+      setLocalComments([]);
+    }
+  }, [fetchFeedComments, feedId]);
+
+  // Optimistic add
+  const handleAddComment = async (commentData: Omit<Comment, "id" | "createdAt">) => {
+    console.log("Adding comment with feed ID:", feedId);
+    if (!feedId) {
+      console.error("Cannot add comment: No feed message available for the selected date");
+      return;
+    }
+    
+    // Create a temporary comment for optimistic UI update
+    const tempComment: Comment = {
+      ...commentData,
+      id: `temp-${Date.now()}`,
+      createdAt: new Date(),
+    };
+    
+    // Update UI immediately
+    setLocalComments((prev) => [...prev, tempComment]);
+    
+    try {
+      // Simple, direct submission
+      await updateFeedWithComment({ 
+        feedId: feedId as Id<"feed">, 
+        userId: commentData.userId,
+        userName: commentData.userName,
+        userImage: commentData.userImage,
+        content: commentData.content
+      });
+      console.log("Comment added successfully");
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      alert("Failed to add comment. Please try again.");
+    }
+  };
+
   /* ───────────────────────────────────────────── */
   /* 6 Loading gate                                */
   /* ───────────────────────────────────────────── */
@@ -156,7 +233,8 @@ export default function Feed({ id, title, summary, feedback, createdAt }: FeedCa
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-0">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto px-0 pt-0">
         {filteredMessages.length > 0 ? (
           <div className="space-y-4">
             {filteredMessages.map((msg) => (
@@ -170,7 +248,7 @@ export default function Feed({ id, title, summary, feedback, createdAt }: FeedCa
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between text-xs text-muted-foreground pt-0">
-                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <span className="text-xs mr-2">Was this helpful?</span>
                     <Button
                       variant="ghost"
@@ -202,13 +280,33 @@ export default function Feed({ id, title, summary, feedback, createdAt }: FeedCa
                     })}
                   </div>
                 </CardFooter>
-                <CommentSection
-                  feedId={id}
-                  initialComments={comments}
-                  onAddComment={addComment}
-                />
               </Card>
             ))}
+            {/* Comment list at the bottom of the scrollable area */}
+            <div className="space-y-2 mt-4">
+              {[...comments, ...localComments]
+                // Deduplicate comments by content and created time
+                .filter((comment, idx, arr) => {
+                  // Find the first comment with the same content and similar timestamp
+                  return arr.findIndex(c => 
+                    c.content === comment.content && 
+                    c.userId === comment.userId &&
+                    Math.abs(c.createdAt.getTime() - comment.createdAt.getTime()) < 10000
+                  ) === idx;
+                })
+                .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+                .map(comment => (
+                  <div key={comment.id} className="border border-muted rounded-md p-2">
+                    <div className="flex items-center mb-1">
+                      <span className="font-medium text-xs">{comment.userName}</span>
+                    </div>
+                    <p className="text-xs mb-1">{comment.content}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
+                    </p>
+                  </div>
+                ))}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -221,6 +319,11 @@ export default function Feed({ id, title, summary, feedback, createdAt }: FeedCa
             </p>
           </div>
         )}
+      </div>
+
+      {/* Fixed comment section at the bottom */}
+      <div className="flex-none px-4 py-3">
+        <CommentSection onAddComment={handleAddComment} />
       </div>
     </div>
   );

@@ -132,10 +132,10 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
 
   /* 6. UI state hooks (hover + feed selection) */
   const [hover, setHover] = React.useState<string | null>(null);
-  const { selectedDate, setSelectedDate } = useFeedStore();
+  const { selectedDate, updateDatePreserveTab } = useFeedStore();
   const click = (d: string) => {
     onSelectDate?.(d);
-    setSelectedDate(d);
+    updateDatePreserveTab(d);
   };
 
   /* For debugging */

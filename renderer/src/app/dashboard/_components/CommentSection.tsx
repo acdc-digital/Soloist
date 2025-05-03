@@ -4,11 +4,8 @@
 "use client"
 
 import { useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/hooks/useAuth"
-import { formatDistanceToNow } from "date-fns"
 
 // Define types for our comments
 type Comment = {
@@ -21,50 +18,50 @@ type Comment = {
 }
 
 type CommentSectionProps = {
-  feedId: string
-  initialComments?: Comment[]
   onAddComment?: (comment: Omit<Comment, "id" | "createdAt">) => Promise<void>
 }
 
-export function CommentSection({ 
-  feedId, 
-  initialComments = [], 
-  onAddComment 
-}: CommentSectionProps) {
+export function CommentSection({ onAddComment }: CommentSectionProps) {
   const { user } = useAuth()
-  const [comments, setComments] = useState<Comment[]>(initialComments)
   const [newComment, setNewComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [lastSubmitTime, setLastSubmitTime] = useState(0)
 
   // Handler for submitting a new comment
-  const handleSubmitComment = async () => {
+  const handleSubmitComment = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    // Validate inputs
     if (!user || !newComment.trim()) return
     
-    setIsSubmitting(true)
+    // Prevent double submission
+    if (isSubmitting) return;
     
-    // Create a new comment object
-    const commentData = {
-      userId: user.id,
-      userName: user.name || "Anonymous User",
-      userImage: user.imageUrl,
-      content: newComment.trim()
+    // Throttle submissions - prevent multiple submissions within 3 seconds
+    const now = Date.now();
+    if (now - lastSubmitTime < 3000) {
+      console.log("Submission throttled - too soon after last comment");
+      return;
     }
     
+    setIsSubmitting(true)
+    setLastSubmitTime(now)
     try {
+      // Create a new comment object
+      const commentData = {
+        userId: user.id,
+        userName: user.name || "Anonymous User",
+        userImage: user.imageUrl || undefined,
+        content: newComment.trim()
+      }
       // If we have an external handler, call it
       if (onAddComment) {
+        console.log("Submitting comment:", commentData);
         await onAddComment(commentData)
       }
       
-      // For local state, add a temporary ID and timestamp
-      const tempComment: Comment = {
-        ...commentData,
-        id: `temp-${Date.now()}`,
-        createdAt: new Date()
-      }
-      
-      // Update local state
-      setComments(prev => [tempComment, ...prev])
+      // Clear the input
       setNewComment("")
     } catch (error) {
       console.error("Failed to add comment:", error)
@@ -73,66 +70,51 @@ export function CommentSection({
     }
   }
 
-  // Generate initials for avatar fallback
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2)
-  }
-
   return (
-    <div className="mt-6 space-y-4 p-4">
-      <h3 className="font-medium">Comments</h3>
-      {/* Comment input area */}
-      <div className="flex gap-3">
-        <div className="flex-1 space-y-2">
-          <Textarea
-            placeholder="Add a comment..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className="min-h-20 resize-none"
-          />
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleSubmitComment} 
-              disabled={!newComment.trim() || isSubmitting}
-              size="sm"
-            >
-              {isSubmitting ? "Posting..." : "Post Comment"}
-            </Button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Comment list */}
-      <div className="space-y-4 mt-6">
-        {comments.length === 0 ? (
-          <p className="text-center text-muted-foreground text-sm py-4">
-            Begin your comments here.
-          </p>
+    <form
+      className="relative flex items-center p-0 pt-2"
+      onSubmit={handleSubmitComment}
+    >
+      <Textarea
+        placeholder="Add a comment..."
+        value={newComment}
+        onChange={(e) => setNewComment(e.target.value)}
+        className="min-h-[36px] resize-none text-sm pr-12"
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmitComment();
+          }
+        }}
+        disabled={isSubmitting}
+      />
+      <button
+        type="submit"
+        className="absolute right-2 bottom-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-sm p-1 transition"
+        disabled={!newComment.trim() || isSubmitting}
+        tabIndex={0}
+        aria-label="Post comment"
+        title="Post comment"
+      >
+        {isSubmitting ? (
+          <span className="animate-pulse">...</span>
         ) : (
-          comments.map(comment => (
-            <div key={comment.id} className="flex gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={comment.userImage} alt={comment.userName} />
-                <AvatarFallback>{getInitials(comment.userName)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{comment.userName}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm">{comment.content}</p>
-              </div>
-            </div>
-          ))
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+          >
+            <path d="M12 2L4 20L12 17L20 20L12 2Z"></path>
+          </svg>
         )}
-      </div>
-    </div>
+      </button>
+    </form>
   )
 }

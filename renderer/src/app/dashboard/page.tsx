@@ -44,6 +44,7 @@ export default function Dashboard() {
     activeTab,
     setActiveTab,
     setSidebarOpen,
+    updateDatePreserveTab,
   } = useFeedStore();
 
   /* ───────────────────────────────────────────── */
@@ -137,8 +138,7 @@ export default function Dashboard() {
   /*  Handlers                                     */
   /* ───────────────────────────────────────────── */
   const handleSelectDate = (dateString: string) => {
-    setSelectedDate(dateString);
-    setActiveTab("log");
+    updateDatePreserveTab(dateString);
     setSidebarOpen(true);
 
     if (window.innerWidth < SIDEBAR_AUTO_COLLAPSE_WIDTH) {
@@ -222,7 +222,7 @@ export default function Dashboard() {
             title={renderSidebarTitle()}
             onClose={() => {
               toggleSidebar();
-              setSelectedDate(null);
+              updateDatePreserveTab(null);
               if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH) {
                 setCollapsed(false);
               }
@@ -234,7 +234,7 @@ export default function Dashboard() {
                   date={selectedDate}
                   onClose={() => {
                     toggleSidebar();
-                    setSelectedDate(null);
+                    updateDatePreserveTab(null);
                     if (window.innerWidth >= SIDEBAR_AUTO_COLLAPSE_WIDTH) {
                       setCollapsed(false);
                     }

@@ -37,6 +37,13 @@ const schema = defineSchema({
     date: v.string(),
     message: v.string(),
     createdAt: v.number(),
+    comments: v.optional(v.array(v.object({
+      userId: v.string(),
+      userName: v.string(),
+      userImage: v.optional(v.string()),
+      content: v.string(),
+      createdAt: v.number(),
+    }))),
   }),
 
   forecast: defineTable({
@@ -52,14 +59,6 @@ const schema = defineSchema({
     basedOnDays: v.array(v.string()),
   })
   .index("byUserDate", ["userId", "date"]),
-
-  comments: defineTable({
-    feedId: v.id("feeds"),
-    userId: v.string(),
-    userName: v.string(),
-    userImage: v.optional(v.string()),
-    content: v.string(),
-  })
 
   // other tables...
 });

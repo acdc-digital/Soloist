@@ -33,6 +33,9 @@ interface FeedState {
 
   // NEW: reset or "destructure" feed
   resetFeed: () => void;
+  
+  // NEW: update selected date while preserving the current active tab
+  updateDatePreserveTab: (date: string | null) => void;
 }
 
 export const useFeedStore = create<FeedState>((set) => ({
@@ -58,5 +61,10 @@ export const useFeedStore = create<FeedState>((set) => ({
       feedMessages: null,
       activeTab: "log",
     });
+  },
+  
+  // Update selected date without changing the active tab
+  updateDatePreserveTab: (date) => {
+    set({ selectedDate: date });
   },
 }));

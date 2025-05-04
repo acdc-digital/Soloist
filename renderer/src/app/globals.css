@@ -121,7 +121,9 @@
   }
 }
 
-html, body {
+html, body, #__next {
   background: transparent;
+  height: 100%;
+  min-height: 0;
   /* other global styles */
 }

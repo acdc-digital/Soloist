@@ -26,7 +26,7 @@ export default function RootLayout({
     <ConvexAuthNextjsServerProvider>
       <html lang="en" suppressHydrationWarning>
         <head />
-        <body className={`font-sans ${inter.variable}`}>
+        <body className={`font-sans ${inter.variable} h-full`}>
           <ConvexClientProvider>
             {/* Wrap children in our UserProvider to provide user context */}
             <UserProvider>
@@ -36,7 +36,7 @@ export default function RootLayout({
                 enableSystem
                 disableTransitionOnChange
               >
-                <main className="min-h-screen">{children}</main>
+                <main className="h-full min-h-0">{children}</main>
               </ThemeProvider>
             </UserProvider>
           </ConvexClientProvider>

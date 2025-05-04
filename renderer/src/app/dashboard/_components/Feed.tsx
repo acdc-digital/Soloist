@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { CommentSection } from "./CommentSection";
+import FeedFooter from "./FeedFooter";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Define Comment type locally to reduce dependencies
 type Comment = {
@@ -358,11 +360,11 @@ export default function Feed() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto px-0 pt-0">
-        {filteredMessages.length > 0 ? (
-          <div className="space-y-4">
-            {filteredMessages.map((msg) => (
+      <div className="overflow-y-auto p-4" style={{ height: 'calc(100vh - 64px - 56px)' }}>
+        <div className="space-y-4">
+          {/* daily summary */}
+          {filteredMessages.length > 0 ? (
+            filteredMessages.map((msg) => (
               <Card
                 key={msg._id}
                 className="transition-all duration-200 hover:shadow-md bg-card/50"
@@ -406,115 +408,116 @@ export default function Feed() {
                   </div>
                 </CardFooter>
               </Card>
-            ))}
-            {/* Comment list at the bottom of the scrollable area */}
-            <div className="space-y-2 mt-4">
-              {[...comments, ...localComments]
-                // Deduplicate comments by content and created time
-                .filter((comment, idx, arr) => {
-                  // Find the first comment with the same content and similar timestamp
-                  return arr.findIndex(c => 
-                    c.content === comment.content && 
-                    c.userId === comment.userId &&
-                    Math.abs(c.createdAt.getTime() - comment.createdAt.getTime()) < 10000
-                  ) === idx;
-                })
-                .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-                .map(comment => (
-                  <div key={comment.id} className="border border-muted rounded-md p-2">
-                    <div className="flex items-center mb-1">
-                      <span className="font-medium text-xs">{comment.userName}</span>
-                    </div>
-                    <p className="text-xs mb-1">{comment.content}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(comment.createdAt, { addSuffix: true })}
-                    </p>
-                  </div>
-                ))}
-            </div>
-          </div>
-        ) : !hasLogForDate ? (
-          // No daily log exists for this date
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="mb-4 p-3 rounded-full bg-amber-100 dark:bg-amber-900/20">
-              <AlertCircle className="h-8 w-8 text-amber-500" />
-            </div>
-            <h3 className="text-xl font-medium mb-2">No Daily Log Found</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mb-2">
-              You need to create a daily log for {new Date(selectedDate).toLocaleDateString()} before generating insights.
-            </p>
-            
-            {/* Debug information */}
-            <div className="mt-2 text-xs text-muted-foreground p-2 border rounded max-w-xs overflow-hidden mb-4">
-              <div className="text-left mb-1">Debug info:</div>
-              <div className="text-left">User ID: {userId || "none"}</div>
-              <div className="text-left">Date: {selectedDate}</div>
-              <div className="text-left">Log count: {allUserLogs?.length || 0}</div>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <Button 
-                onClick={handleCreateDailyLog}
-                className="flex items-center gap-2"
-              >
-                <FileEdit className="h-4 w-4" />
-                Create Daily Log
-              </Button>
+            ))
+          ) : !hasLogForDate ? (
+            // No daily log exists for this date
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="mb-4 p-3 rounded-full bg-amber-100 dark:bg-amber-900/20">
+                <AlertCircle className="h-8 w-8 text-amber-500" />
+              </div>
+              <h3 className="text-xl font-medium mb-2">No Daily Log Found</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mb-2">
+                You need to create a daily log for {new Date(selectedDate).toLocaleDateString()} before generating insights.
+              </p>
               
-              <Button
-                onClick={forceRefresh}
-                variant="outline"
-                className="text-xs"
-              >
-                Force Refresh
-              </Button>
-            </div>
-          </div>
-        ) : (
-          // Daily log exists but no feed yet
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="mb-4 p-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
-              <RefreshCw className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-medium mb-2">No insights yet</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mb-4">
-              Generate AI insights based on your log for {new Date(selectedDate).toLocaleDateString()}.
-            </p>
-            
-            {/* Debug information */}
-            <div className="mt-2 text-xs text-muted-foreground p-2 border rounded max-w-xs overflow-hidden mb-4">
-              <div className="text-left mb-1">Debug info:</div>
-              <div className="text-left">User ID: {userId || "none"}</div>
-              <div className="text-left">Date: {selectedDate}</div>
-              <div className="text-left">Log found: {dailyLog ? "Yes" : "No"}</div>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <Button 
-                onClick={handleGenerateFeed} 
-                disabled={loading}
-                className="flex items-center gap-2"
-              >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Generate Insights
-              </Button>
+              {/* Debug information */}
+              <div className="mt-2 text-xs text-muted-foreground p-2 border rounded max-w-xs overflow-hidden mb-4">
+                <div className="text-left mb-1">Debug info:</div>
+                <div className="text-left">User ID: {userId || "none"}</div>
+                <div className="text-left">Date: {selectedDate}</div>
+                <div className="text-left">Log count: {allUserLogs?.length || 0}</div>
+              </div>
               
-              <Button
-                onClick={forceRefresh}
-                variant="outline"
-                className="text-xs"
-              >
-                Force Refresh
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={handleCreateDailyLog}
+                  className="flex items-center gap-2"
+                >
+                  <FileEdit className="h-4 w-4" />
+                  Create Daily Log
+                </Button>
+                
+                <Button
+                  onClick={forceRefresh}
+                  variant="outline"
+                  className="text-xs"
+                >
+                  Force Refresh
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            // Daily log exists but no feed yet
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="mb-4 p-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <RefreshCw className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-medium mb-2">No insights yet</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mb-4">
+                Generate AI insights based on your log for {new Date(selectedDate).toLocaleDateString()}.
+              </p>
+              
+              {/* Debug information */}
+              <div className="mt-2 text-xs text-muted-foreground p-2 border rounded max-w-xs overflow-hidden mb-4">
+                <div className="text-left mb-1">Debug info:</div>
+                <div className="text-left">User ID: {userId || "none"}</div>
+                <div className="text-left">Date: {selectedDate}</div>
+                <div className="text-left">Log found: {dailyLog ? "Yes" : "No"}</div>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={handleGenerateFeed} 
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Generate Insights
+                </Button>
+                
+                <Button
+                  onClick={forceRefresh}
+                  variant="outline"
+                  className="text-xs"
+                >
+                  Force Refresh
+                </Button>
+              </div>
+            </div>
+          )}
 
-      {/* Fixed comment section at the bottom */}
-      <div className="flex-none px-4 py-3">
-        <CommentSection onAddComment={handleAddComment} />
+          {/* comments section */}
+          {comments.length > 0 && (
+            <div className="space-y-2 pb-10">
+              {comments.map((comment) => (
+                <Card key={comment.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      {comment.userImage && (
+                        <img
+                          src={comment.userImage}
+                          alt={comment.userName}
+                          className="h-8 w-8 rounded-full"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium">{comment.userName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(comment.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-2">{comment.content}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      <FeedFooter onAddComment={handleAddComment} />
     </div>
   );
 }

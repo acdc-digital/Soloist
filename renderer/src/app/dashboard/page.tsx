@@ -245,19 +245,6 @@ export default function Dashboard() {
                   onLegendFilterChange={handleLegendFilterChange}
                 />
               </div>
-              
-              {/* Debug button row */}
-              <div className="flex justify-end mb-2">
-                <Button 
-                  size="sm" 
-                  variant="secondary"
-                  onClick={handleSwitchToFeed}
-                  className="text-xs"
-                >
-                  <ArrowRightToLine className="h-3 w-3 mr-1" />
-                  Force Feed Tab
-                </Button>
-              </div>
             </div>
 
             {/* Heatmap */}

@@ -118,7 +118,7 @@ export function RightSidebar({
         </div>
 
         {/* Main content area: vertical scroll, no horizontal scroll */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {children}
         </div>
       </div>

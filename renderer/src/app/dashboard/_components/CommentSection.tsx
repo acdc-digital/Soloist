@@ -6,6 +6,7 @@
 import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/hooks/useAuth"
+import { getUserId } from "@/utils/userUtils"
 
 // Define types for our comments
 type Comment = {
@@ -27,13 +28,16 @@ export function CommentSection({ onAddComment }: CommentSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [lastSubmitTime, setLastSubmitTime] = useState(0)
 
+  // Get the user ID consistently
+  const userId = getUserId(user);
+
   // Handler for submitting a new comment
   const handleSubmitComment = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
     }
     // Validate inputs
-    if (!user || !newComment.trim()) return
+    if (!user || !userId || !newComment.trim()) return
     
     // Prevent double submission
     if (isSubmitting) return;
@@ -50,7 +54,7 @@ export function CommentSection({ onAddComment }: CommentSectionProps) {
     try {
       // Create a new comment object
       const commentData = {
-        userId: user.id,
+        userId,
         userName: user.name || "Anonymous User",
         userImage: user.imageUrl || undefined,
         content: newComment.trim()
@@ -111,7 +115,7 @@ export function CommentSection({ onAddComment }: CommentSectionProps) {
             strokeLinejoin="round"
             className="w-4 h-4"
           >
-            <path d="M12 2L4 20L12 17L20 20L12 2Z"></path>
+            <path d="M12 19V5M5 12l7-7 7 7"></path>
           </svg>
         )}
       </button>

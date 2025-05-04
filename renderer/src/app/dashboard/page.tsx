@@ -6,7 +6,6 @@
 import React, { useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { signOut } from "../../../convex/auth";
 import { parseISO, format } from "date-fns";
 
 // Hooks & Stores
@@ -25,12 +24,15 @@ import DailyLogForm from "./_components/dailyLogForm";
 import Feed from "./_components/Feed";
 import { RightSidebar } from "./_components/RightSidebar";
 import SoloistPage from "./soloist/page";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowRightToLine } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Responsive breakpoint for auto-collapse in pixels
 const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1256;
 
 export default function Dashboard() {
+  console.log("Dashboard rendering");
+  
   const { user } = useUser();
   const setStoreUser = useUserStore((state) => state.setUser);
   const { setCollapsed, currentView } = useSidebarStore();
@@ -40,12 +42,18 @@ export default function Dashboard() {
     sidebarOpen,
     toggleSidebar,
     selectedDate,
-    setSelectedDate,
     activeTab,
     setActiveTab,
     setSidebarOpen,
     updateDatePreserveTab,
   } = useFeedStore();
+  
+  console.log("Dashboard feed state:", {
+    sidebarOpen,
+    selectedDate,
+    activeTab,
+    currentView
+  });
 
   /* ───────────────────────────────────────────── */
   /*  Sync user from Convex → Zustand store        */
@@ -56,7 +64,7 @@ export default function Dashboard() {
         id: user._id ? user._id.toString() : "",
         name: user.name || "",
         email: user.email || "",
-        profilePicture: user.imageUrl,
+        profilePicture: user.image,
       });
     }
   }, [user, setStoreUser]);
@@ -69,10 +77,14 @@ export default function Dashboard() {
       id: user._id?.toString() ?? "",
       name: user.name ?? "",
       email: user.email ?? "",
-      profilePicture: user.imageUrl,
+      profilePicture: user.image,
     };
 
-    setStoreUser((prev) => (shallowEqual(prev, next) ? prev : next));
+    // Type-safe comparison
+    setStoreUser((prev) => {
+      if (shallowEqual(prev, next)) return prev;
+      return next;
+    });
   }, [user, setStoreUser]);
 
   /* ───────────────────────────────────────────── */
@@ -102,15 +114,32 @@ export default function Dashboard() {
     }
   }, [sidebarOpen, setCollapsed]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    useUserStore.getState().signOut();
+  // Debug handler to explicitly switch to feed tab
+  const handleSwitchToFeed = () => {
+    console.log("Explicitly switching to feed tab");
+    if (selectedDate) {
+      setActiveTab("feed");
+      setSidebarOpen(true);
+    } else {
+      // If no date is selected, get today's date
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const dateKey = `${yyyy}-${mm}-${dd}`;
+      
+      console.log("No date selected, setting to today:", dateKey);
+      updateDatePreserveTab(dateKey);
+      setActiveTab("feed");
+      setSidebarOpen(true);
+    }
   };
 
   /* ───────────────────────────────────────────── */
   /*  Heatmap year selector                        */
   /* ───────────────────────────────────────────── */
   const [selectedYear, setSelectedYear] = React.useState("2025");
+  const [selectedLegend, setSelectedLegend] = React.useState<string | null>(null);
   const userId = getUserId(user);
 
   /*  Fetch daily logs (dashboard view only)       */
@@ -138,6 +167,7 @@ export default function Dashboard() {
   /*  Handlers                                     */
   /* ───────────────────────────────────────────── */
   const handleSelectDate = (dateString: string) => {
+    console.log("handleSelectDate called with:", dateString);
     updateDatePreserveTab(dateString);
     setSidebarOpen(true);
 
@@ -150,10 +180,16 @@ export default function Dashboard() {
     setSelectedYear(newYear);
   }
 
+  function handleLegendFilterChange(legend: string | null) {
+    setSelectedLegend(legend);
+  }
+
   /* ───────────────────────────────────────────── */
   /*  Sidebar title builder                        */
   /* ───────────────────────────────────────────── */
   function renderSidebarTitle() {
+    console.log("renderSidebarTitle called, activeTab:", activeTab);
+    
     // Daily Log
     if (activeTab === "log") {
       if (!selectedDate) return "Daily Log Form";
@@ -200,11 +236,28 @@ export default function Dashboard() {
         <>
           <main className="flex-1 flex flex-col relative">
             {/* Year controls */}
-            <div className="sticky top-0 z-10 px-4 mt-2 mb-2">
-              <Controls
-                selectedYear={selectedYear}
-                onYearChange={handleYearChange}
-              />
+            <div className="sticky top-0 z-10 px-4 mt-2">
+              <div className="flex justify-between items-center mb-2">
+                <Controls
+                  selectedYear={selectedYear}
+                  onYearChange={handleYearChange}
+                  selectedLegend={selectedLegend}
+                  onLegendFilterChange={handleLegendFilterChange}
+                />
+              </div>
+              
+              {/* Debug button row */}
+              <div className="flex justify-end mb-2">
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  onClick={handleSwitchToFeed}
+                  className="text-xs"
+                >
+                  <ArrowRightToLine className="h-3 w-3 mr-1" />
+                  Force Feed Tab
+                </Button>
+              </div>
             </div>
 
             {/* Heatmap */}
@@ -246,7 +299,10 @@ export default function Dashboard() {
                 </div>
               )
             ) : activeTab === "feed" ? (
-              <Feed />
+              <div>
+                {console.log("Rendering Feed component", { activeTab, selectedDate })}
+                <Feed />
+              </div>
             ) : (
               <div className="p-4 text-sm text-zinc-500">No content.</div>
             )}

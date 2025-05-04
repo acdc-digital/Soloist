@@ -17,6 +17,7 @@ import type * as auth from "../auth.js";
 import type * as comments from "../comments.js";
 import type * as dailyLogs from "../dailyLogs.js";
 import type * as feed from "../feed.js";
+import type * as feedback from "../feedback.js";
 import type * as forecast from "../forecast.js";
 import type * as generator from "../generator.js";
 import type * as http from "../http.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   comments: typeof comments;
   dailyLogs: typeof dailyLogs;
   feed: typeof feed;
+  feedback: typeof feedback;
   forecast: typeof forecast;
   generator: typeof generator;
   http: typeof http;

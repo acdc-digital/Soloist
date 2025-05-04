@@ -4,7 +4,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useFeedStore } from "@/store/feedStore";
@@ -16,11 +16,12 @@ import {
   ThumbsUp,
   ThumbsDown,
   Calendar,
-  Info
+  Info,
+  FileEdit,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CommentSection } from "./CommentSection";
 
@@ -35,14 +36,24 @@ type Comment = {
 };
 
 export default function Feed() {
+  console.log("Feed component mounting/rendering");
+  
   const {
     selectedDate,
     setFeedMessages,
-    activeTab,
     feedMessages,
     loading,
     setLoading,
+    activeTab,
+    setActiveTab,
   } = useFeedStore();
+  
+  console.log("Feed store state:", {
+    selectedDate,
+    activeTab,
+    hasMessages: feedMessages ? feedMessages.length : 0,
+    loading
+  });
 
   // State for feedback
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, "liked" | "disliked" | null>>({});
@@ -54,52 +65,132 @@ export default function Feed() {
   // Direct mutation to add a comment to a feed document
   const updateFeedWithComment = useMutation(api.feed.addComment);
 
+  // New: feedback mutation
+  const submitFeedback = useMutation(api.feedback.submitFeedback);
+
   /* ───────────────────────────────────────────── */
   /* 1 Resolve the current user's stable ID        */
   /* ───────────────────────────────────────────── */
   const { user, isLoading: userLoading } = useUserContext();
-  const rawAuthId = user?.authId ?? user?._id ?? user?.id ?? null;
-  const userId =
-    typeof rawAuthId === "string" ? rawAuthId.split("|")[0] : null;
+  // Updated user ID extraction with type safety
+  const rawAuthId = user ? (
+    // For Convex user objects
+    'authId' in user ? user.authId : 
+    // For document IDs
+    '_id' in user ? user._id : 
+    // For store user objects
+    user.id || null
+  ) : null;
+  
+  const userId = typeof rawAuthId === "string" ? rawAuthId.split("|")[0] : null;
+  
+  console.log("User data:", { 
+    userId, 
+    userLoading, 
+    userObject: user 
+  });
 
   /* ───────────────────────────────────────────── */
   /* 2 Query feed messages for that user           */
   /* ───────────────────────────────────────────── */
   const feedMessagesData = useQuery(
     api.feed.listFeedMessages,
-    userId ? { userId } : undefined // only send args when we have an ID
+    userId ? { userId } : "skip" // Skip query when userId is not available
+  );
+  
+  console.log("Feed API response:", { 
+    feedMessagesCount: feedMessagesData?.length || 0,
+    feedMessagesData: feedMessagesData || "No data" 
+  });
+
+  /* ───────────────────────────────────────────── */
+  /* 3 Check if daily log exists for this date     */
+  /* ───────────────────────────────────────────── */
+  const dailyLog = useQuery(
+    api.dailyLogs.getDailyLog,
+    userId && selectedDate ? { userId, date: selectedDate } : "skip"
   );
 
-  /* ───────────────────────────────────────────── */
-  /* 3 Mutation to (re)generate feed for a log     */
-  /* ───────────────────────────────────────────── */
-  const generateFeed = useMutation(api.feed.generateFeedForDailyLog);
+  // Debugging: Get all logs for this user to compare
+  const allUserLogs = useQuery(
+    api.dailyLogs.listAllUserLogs,
+    userId ? { userId } : "skip"
+  );
+
+  const hasLogForDate = !!dailyLog;
   
-  // We'll add these mutations later
-  // const submitFeedback = useMutation(api.feed.submitFeedback);
+  console.log("Daily log check:", {
+    selectedDate,
+    hasLog: hasLogForDate,
+    userId: userId,
+    userIdType: typeof userId,
+    query: userId && selectedDate ? { userId, date: selectedDate } : "skip",
+    dailyLogResponse: dailyLog
+  });
+
+  // Log all user logs for debugging
+  console.log("All user logs:", {
+    userId,
+    count: allUserLogs?.length || 0,
+    logs: allUserLogs || "No logs found"
+  });
 
   /* ───────────────────────────────────────────── */
-  /* 4 Sync Convex → feedStore when data arrives   */
+  /* 4 Action to (re)generate feed for a log       */
+  /* ───────────────────────────────────────────── */
+  const generateFeed = useAction(api.feed.generateFeedForDailyLog);
+  
+  // For debugging: Force reload
+  const forceRefresh = () => {
+    console.log("Force refreshing - current state:", {
+      selectedDate,
+      userId,
+      hasLogForDate
+    });
+    
+    // Reload the page
+    window.location.reload();
+  };
+
+  /* ───────────────────────────────────────────── */
+  /* 5 Sync Convex → feedStore when data arrives   */
   /* ───────────────────────────────────────────── */
   useEffect(() => {
+    console.log("Feed API data changed:", feedMessagesData?.length || 0);
     if (feedMessagesData) {
       setFeedMessages(feedMessagesData);
     }
   }, [feedMessagesData, setFeedMessages]);
 
   /* ───────────────────────────────────────────── */
-  /* 5 Helpers                                     */
+  /* 6 Helpers                                     */
   /* ───────────────────────────────────────────── */
   const filteredMessages =
     selectedDate && feedMessages
       ? feedMessages.filter((m) => m.date === selectedDate)
       : [];
+      
+  console.log("Filtered messages:", {
+    selectedDate,
+    allMessagesCount: feedMessages?.length || 0,
+    filteredCount: filteredMessages.length,
+    filteredMessages
+  });
 
   const handleGenerateFeed = async () => {
     if (!selectedDate || !userId) return;
+    
+    // Check if we have a daily log first
+    if (!hasLogForDate) {
+      console.error("Cannot generate feed: No daily log exists for this date");
+      return;
+    }
+    
     setLoading(true);
     try {
+      console.log("Generating feed for:", { userId, date: selectedDate });
       await generateFeed({ userId, date: selectedDate });
+      console.log("Feed generated successfully");
     } catch (err) {
       console.error("Error generating feed:", err);
     } finally {
@@ -108,34 +199,46 @@ export default function Feed() {
   };
 
   const handleFeedback = async (messageId: string, isLiked: boolean) => {
+    if (!userId) return;
+    
     // Update local state immediately for responsive UI
     setFeedbackStatus(prev => ({
       ...prev,
       [messageId]: isLiked ? "liked" : "disliked"
     }));
 
-    // TODO: Implement actual feedback submission to Convex
-    // try {
-    //   await submitFeedback({ 
-    //     messageId,
-    //     userId,
-    //     isLiked,
-    //     date: selectedDate
-    //   });
-    // } catch (err) {
-    //   console.error("Error submitting feedback:", err);
-    //   // Revert local state if submission fails
-    //   setFeedbackStatus(prev => ({
-    //     ...prev,
-    //     [messageId]: null
-    //   }));
-    // }
+    // Submit feedback to backend
+    try {
+      await submitFeedback({ 
+        feedId: messageId as Id<"feed">,
+        userId,
+        isLiked,
+      });
+    } catch (err) {
+      console.error("Error submitting feedback:", err);
+      // Revert local state if submission fails
+      setFeedbackStatus(prev => ({
+        ...prev,
+        [messageId]: null
+      }));
+    }
+  };
+
+  const handleCreateDailyLog = () => {
+    // Switch to the log tab to create a log first
+    setActiveTab("log");
   };
 
   // Query to get comments directly
   const fetchFeedComments = useQuery(
     api.feed.getComments,
     feedId ? { feedId: feedId as Id<"feed"> } : "skip"
+  );
+
+  // New: Query to get user's feedback for this feed item
+  const userFeedback = useQuery(
+    api.feedback.getUserFeedback,
+    feedId && userId ? { feedId: feedId as Id<"feed">, userId } : "skip"
   );
 
   // Set the feed ID based on the selected message
@@ -146,6 +249,7 @@ export default function Feed() {
       console.log("Setting feed ID from filtered message:", messageId);
       setFeedId(messageId);
     } else {
+      console.log("No filtered messages found, clearing feedId");
       setFeedId(null);
     }
   }, [filteredMessages]);
@@ -155,7 +259,7 @@ export default function Feed() {
     if (fetchFeedComments) {
       console.log("Got comments from backend:", fetchFeedComments);
       // Transform the data to match our Comment type
-      const formattedComments = fetchFeedComments.map((comment: any, index: number) => ({
+      const formattedComments = fetchFeedComments.map((comment, index: number) => ({
         id: `${feedId}_${index}`,
         userId: comment.userId,
         userName: comment.userName,
@@ -168,6 +272,16 @@ export default function Feed() {
       setLocalComments([]);
     }
   }, [fetchFeedComments, feedId]);
+
+  // New: Update feedback status when userFeedback changes
+  useEffect(() => {
+    if (feedId && userFeedback) {
+      setFeedbackStatus(prev => ({
+        ...prev,
+        [feedId]: userFeedback?.isLiked ? "liked" : "disliked"
+      }));
+    }
+  }, [userFeedback, feedId]);
 
   // Optimistic add
   const handleAddComment = async (commentData: Omit<Comment, "id" | "createdAt">) => {
@@ -204,9 +318,10 @@ export default function Feed() {
   };
 
   /* ───────────────────────────────────────────── */
-  /* 6 Loading gate                                */
+  /* 7 Loading gate                                */
   /* ───────────────────────────────────────────── */
   if (userLoading || !userId) {
+    console.log("Feed rendering loading state - user loading or no userId");
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -215,9 +330,10 @@ export default function Feed() {
   }
 
   /* ───────────────────────────────────────────── */
-  /* 7 Render                                      */
+  /* 8 Date selection required                     */
   /* ───────────────────────────────────────────── */
   if (!selectedDate) {
+    console.log("Feed rendering no-date-selected state");
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center">
         <div className="mb-4 p-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -225,11 +341,20 @@ export default function Feed() {
         </div>
         <h3 className="text-xl font-medium mb-2">Select a date</h3>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs">
-          Choose a date from the calendar to view insights generated for that day's log.
+          Choose a date from the calendar to view insights generated for that day&apos;s log.
         </p>
       </div>
     );
   }
+
+  console.log("Feed rendering final state", {
+    selectedDate,
+    userId,
+    feedMessagesCount: feedMessages?.length || 0,
+    filteredCount: filteredMessages.length,
+    activeTab,
+    hasLogForDate
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -308,15 +433,80 @@ export default function Feed() {
                 ))}
             </div>
           </div>
+        ) : !hasLogForDate ? (
+          // No daily log exists for this date
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="mb-4 p-3 rounded-full bg-amber-100 dark:bg-amber-900/20">
+              <AlertCircle className="h-8 w-8 text-amber-500" />
+            </div>
+            <h3 className="text-xl font-medium mb-2">No Daily Log Found</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mb-2">
+              You need to create a daily log for {new Date(selectedDate).toLocaleDateString()} before generating insights.
+            </p>
+            
+            {/* Debug information */}
+            <div className="mt-2 text-xs text-muted-foreground p-2 border rounded max-w-xs overflow-hidden mb-4">
+              <div className="text-left mb-1">Debug info:</div>
+              <div className="text-left">User ID: {userId || "none"}</div>
+              <div className="text-left">Date: {selectedDate}</div>
+              <div className="text-left">Log count: {allUserLogs?.length || 0}</div>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={handleCreateDailyLog}
+                className="flex items-center gap-2"
+              >
+                <FileEdit className="h-4 w-4" />
+                Create Daily Log
+              </Button>
+              
+              <Button
+                onClick={forceRefresh}
+                variant="outline"
+                className="text-xs"
+              >
+                Force Refresh
+              </Button>
+            </div>
+          </div>
         ) : (
+          // Daily log exists but no feed yet
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="mb-4 p-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
               <RefreshCw className="h-8 w-8 text-primary" />
             </div>
             <h3 className="text-xl font-medium mb-2">No insights yet</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mb-6">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mb-4">
               Generate AI insights based on your log for {new Date(selectedDate).toLocaleDateString()}.
             </p>
+            
+            {/* Debug information */}
+            <div className="mt-2 text-xs text-muted-foreground p-2 border rounded max-w-xs overflow-hidden mb-4">
+              <div className="text-left mb-1">Debug info:</div>
+              <div className="text-left">User ID: {userId || "none"}</div>
+              <div className="text-left">Date: {selectedDate}</div>
+              <div className="text-left">Log found: {dailyLog ? "Yes" : "No"}</div>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={handleGenerateFeed} 
+                disabled={loading}
+                className="flex items-center gap-2"
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Generate Insights
+              </Button>
+              
+              <Button
+                onClick={forceRefresh}
+                variant="outline"
+                className="text-xs"
+              >
+                Force Refresh
+              </Button>
+            </div>
           </div>
         )}
       </div>

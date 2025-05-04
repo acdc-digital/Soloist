@@ -44,6 +44,11 @@ const schema = defineSchema({
       content: v.string(),
       createdAt: v.number(),
     }))),
+    feedback: v.optional(v.array(v.object({
+      userId: v.string(),
+      isLiked: v.boolean(),
+      createdAt: v.number(),
+    }))),
   }),
 
   forecast: defineTable({

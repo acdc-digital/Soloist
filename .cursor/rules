@@ -1,0 +1,60 @@
+---
+description: Core overview of Soloist so Cursor always codes and explains in line with the project’s architecture, stack, and UI conventions.
+alwaysApply: true
+---
+
+# Soloist (Solomon‑Powered) – Project Overview
+
+## 1. Product summary
+Soloist is a **daily‑log heat‑mapping app**.  
+* Users record daily reflections tied to their own goals or requirements.  
+* “Solomon” (our AI layer) scores each log **0 = worst‑day‑ever → 100 = best‑day‑ever**.  
+* A calendar‑style heatmap visualises scores via colour intensity.
+
+## 2. Tech stack & key libraries
+| Area | Choice | Notes |
+|------|--------|-------|
+| Framework | **Next.js** (TypeScript, App Router) | running inside Electron |
+| Database  | **Convex** (serverless)               | mutations/queries for logs, feeds, forecasts |
+| Styling   | **Tailwind CSS** (base **Zinc** palette) | no separate CSS files |
+| UI kit    | **ShadCN** components + **Lucide‑React** icons | consistent design tokens |
+| State     | **Zustand** | single source of truth for user, sidebar, feed, forecast |
+| AI layer  | OpenAI (serverless actions) | Solomon scoring + 7‑day forecast generation |
+
+## 3. Main window layout (SPA)
+┌───────────────────────────────────────────────────────────────┐
+│ 1. Left Sidebar │ 2. Canvas (Heatmap) │ 3. Right Sidebar │
+└───────────────────────────────────────────────────────────────┘
+
+### 3.1 Left Sidebar  
+* Light theme navigation: **Home**, **Logs**, **Analytics**, **Settings** (more coming).  
+* Bottom **“New Log”** button → opens **Daily Log Form** in right sidebar.
+
+### 3.2 Canvas (centre)  
+* Month‑by‑month heatmap.  
+* Empty squares = default Zinc; logged squares = colour mapped to Solomon score.  
+* Click any day → corresponding **Daily Log Viewer/Editor** opens in right sidebar.
+
+### 3.3 Right Sidebar  
+* Default: **Feed** (generative life‑line content).  
+* Alternate states:  
+  1. **Daily Log Form** (from “New Log”)  
+  2. **Daily Log Viewer/Editor** (from Canvas click)  
+* Draggable **resizer bar** (left edge) lets user adjust panel width.
+
+## 4. Data & workflow
+1. **Daily Log submission** → Convex mutation → Solomon scoring → heatmap update.  
+2. Need **≥ 4 logs** before generating a **7‑day emotion forecast** (stored in `forecast` table).  
+3. Zustand stores  
+   * `userStore` – auth & profile (canonical)  
+   * `sidebarStore` – left‑sidebar state  
+   * `feedStore` – feed items & status  
+
+## 5. Component & style conventions
+* Components live in `renderer/src/app/**/_components/`; each is a TSX file with a top‑level Props interface and a named export.  
+* Tailwind classes only (no raw CSS); use ShadCN variants.  
+* Default colours come from the Zinc scale; accents use ShadCN tokens.  
+* Prefer Framer Motion for animations.
+
+---
+_This rule ensures every Cursor suggestion aligns with Soloist’s domain language, file structure, and tech choices._

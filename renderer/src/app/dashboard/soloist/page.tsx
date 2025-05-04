@@ -18,6 +18,7 @@ import {
 import { useQuery, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useUserContext } from "@/provider/userContext";
+import WeeklyPatterns from "./_components/WeeklyPatterns";
 
 // Helper component for Loading State
 const LoadingState = ({ message = "Loading..." }: { message?: string }) => (
@@ -154,11 +155,11 @@ export default function SoloistPage() {
     if (Array.isArray(forecastData) && forecastData.length > 0) {
       const todayIndex = forecastData.findIndex(day => day.isToday);
       const defaultIndex = todayIndex !== -1 ? todayIndex : Math.min(3, forecastData.length - 1);
-      if (selectedDayIndex !== defaultIndex) {
-         setSelectedDayIndex(defaultIndex);
-      }
+      setSelectedDayIndex(defaultIndex);
     }
-  }, [forecastData, selectedDayIndex]);
+    // Only run when forecastData changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forecastData]);
 
   // Navigation handlers
   const navigatePrevDay = () => setSelectedDayIndex(prev => Math.max(0, prev - 1));
@@ -226,7 +227,7 @@ export default function SoloistPage() {
   return (
     <div className="flex-1 h-full flex flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-900">
       <div className="flex-1 overflow-auto">
-        <div className="container mx-auto py-4 px-2 flex flex-col h-full max-w-5xl">
+        <div className="container mx-auto py-4 px-4 flex flex-col h-full max-w-5xl">
           <Card className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm mb-4">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -241,25 +242,6 @@ export default function SoloistPage() {
                   <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
                     Avg: {averageScore}
                   </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateForecast}
-                    disabled={isGeneratingForecast}
-                    className="h-8 text-xs"
-                  >
-                    {isGeneratingForecast ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        {needsForecasts ? "Generate Forecast" : "Update Forecast"}
-                      </>
-                    )}
-                  </Button>
                    <TooltipProvider>
                      <Tooltip>
                        <TooltipTrigger asChild>
@@ -268,7 +250,7 @@ export default function SoloistPage() {
                          </div>
                        </TooltipTrigger>
                        <TooltipContent className="bg-zinc-800 border-zinc-700 text-zinc-200">
-                         Click Generate/Update Forecast or click a day for details.
+                         Forecasts are now generated automatically when you log 4 consecutive days.
                        </TooltipContent>
                      </Tooltip>
                    </TooltipProvider>
@@ -436,15 +418,13 @@ export default function SoloistPage() {
           </Card>
 
           {/* Weekly Pattern and Key Insights Cards (Using Mock Data for now) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
             <Card className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-50">Weekly Pattern</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-40 w-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-sm border border-dashed border-zinc-300 dark:border-zinc-700 rounded-md">
-                  (Weekly pattern visualization placeholder)
-                </div>
+                <WeeklyPatterns data={forecastData} />
               </CardContent>
             </Card>
             <Card className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">

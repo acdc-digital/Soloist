@@ -62,6 +62,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   const dailyLogMutation = useMutation(api.dailyLogs.dailyLog);
   const scoreDailyLog    = useAction(api.score.scoreDailyLog);
   const generateFeed     = useAction(api.feed.generateFeedForDailyLog);
+  const generateForecast = useAction(api.forecast.generateForecast);
 
   const {
     register,
@@ -127,6 +128,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
       await dailyLogMutation({ date: effectiveDate, userId, answers: data });
       await scoreDailyLog({ date: effectiveDate, userId });
       await generateFeed({ date: effectiveDate, userId });
+      await generateForecast({ userId });
 
       /* ───── Switch the sidebar to Feed view ───── */
       setSelectedDate(effectiveDate);

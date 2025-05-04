@@ -62,6 +62,7 @@ export const dailyLog = mutation({
       .filter((q) => q.eq(q.field("date"), date))
       .first();
 
+    let logDoc;
     if (existingLog) {
       // Patch the existing log
       await db.patch(existingLog._id, {
@@ -69,7 +70,7 @@ export const dailyLog = mutation({
         score,
         updatedAt: Date.now(),
       });
-      return db.get(existingLog._id);
+      logDoc = await db.get(existingLog._id);
     } else {
       // Insert a new log
       const newLogId = await db.insert("logs", {
@@ -80,8 +81,12 @@ export const dailyLog = mutation({
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
-      return db.get(newLogId);
+      logDoc = await db.get(newLogId);
     }
+
+    // --- Trigger forecast generation automatically ---
+    // (Removed: db.runAction, as this is not supported in Convex mutations)
+    return logDoc;
   },
 });
 

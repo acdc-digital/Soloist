@@ -129,6 +129,17 @@ export function Sidebar({ className }: SidebarProps) {
     console.log("Soloist action clicked");
   };
 
+  const handleTesting = () => {
+    // Switch to Testing view
+    setView("testing");
+    
+    // Close the right sidebar if it's open
+    const { setSidebarOpen } = useFeedStore.getState();
+    setSidebarOpen(false);
+    
+    console.log("Testing action clicked");
+  };
+
   const handleCalendar = () => {
     // Switch to Dashboard/Calendar view
     setView("dashboard");
@@ -157,6 +168,7 @@ export function Sidebar({ className }: SidebarProps) {
   // Items that show only if expanded
   const mainActions = [
     { id: "soloist",  label: "Soloist",        icon: PersonStanding,  action: handleSoloist, active: currentView === "soloist" },
+    { id: "testing",  label: "Testing",        icon: CircleHelpIcon,  action: handleTesting, active: currentView === "testing" },
     { id: "calendar", label: "Calendar",       icon: Calendar,        action: handleCalendar, active: currentView === "dashboard" },
     { id: "new-log",  label: "Create New Log", icon: Plus,            action: handleCreateNewLog, active: false },
     { id: "settings", label: "Settings",       icon: Settings,        action: handleGoToSettings },

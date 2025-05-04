@@ -23,6 +23,7 @@ import type * as generator from "../generator.js";
 import type * as http from "../http.js";
 import type * as score from "../score.js";
 import type * as templates from "../templates.js";
+import type * as userAttributes from "../userAttributes.js";
 import type * as users from "../users.js";
 
 /**
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   score: typeof score;
   templates: typeof templates;
+  userAttributes: typeof userAttributes;
   users: typeof users;
 }>;
 export declare const api: FilterApi<

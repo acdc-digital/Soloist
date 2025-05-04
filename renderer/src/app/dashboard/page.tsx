@@ -24,6 +24,7 @@ import DailyLogForm from "./_components/dailyLogForm";
 import Feed from "./_components/Feed";
 import { RightSidebar } from "./_components/RightSidebar";
 import SoloistPage from "./soloist/page";
+import TestingPage from "./testing/page";
 import { Loader2, ArrowRightToLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -295,10 +296,15 @@ export default function Dashboard() {
             )}
           </RightSidebar>
         </>
-      ) : (
+      ) : currentView === "soloist" ? (
         /* Soloist view */
         <main className="flex-1 overflow-hidden">
           <SoloistPage />
+        </main>
+      ) : (
+        /* Testing view */
+        <main className="flex-1 overflow-hidden">
+          <TestingPage />
         </main>
       )}
     </div>

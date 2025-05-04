@@ -65,6 +65,13 @@ const schema = defineSchema({
   })
   .index("byUserDate", ["userId", "date"]),
 
+  userAttributes: defineTable({
+    userId: v.string(),
+    attributes: v.any(),
+    updatedAt: v.number(),
+  })
+  .index("byUserId", ["userId"]),
+
   // other tables...
 });
 

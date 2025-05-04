@@ -7,6 +7,7 @@ import * as React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import Attributes from "./_components/Attributes";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -36,6 +37,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <Button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
             Switch to {theme === "dark" ? "light" : "dark"}
           </Button>
+        </div>
+
+        <div className="py-4 border-t border-zinc-200 dark:border-zinc-700 mt-4">
+          <Attributes />
         </div>
 
         <DialogFooter>

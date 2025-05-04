@@ -50,8 +50,17 @@ const getAllDatesInYear = (year: number) => {
   return arr;
 };
 
-const getColorClass = (s: number | null | undefined) =>
-  s == null
+const isFutureDate = (date: Date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date > today;
+};
+
+const getColorClass = (s: number | null | undefined, isFuture: boolean) => {
+  if (isFuture) {
+    return "bg-zinc-400/40 border border-zinc-500/50 dark:bg-zinc-600/40 dark:border-zinc-500/50 cursor-not-allowed";
+  }
+  return s == null
     ? "bg-zinc-200/30 border border-zinc-300/50 dark:bg-zinc-800/20 dark:border-zinc-700/40"
     : s >= 90
     ? "bg-indigo-400/90 hover:bg-indigo-400"
@@ -72,6 +81,7 @@ const getColorClass = (s: number | null | undefined) =>
     : s >= 10
     ? "bg-orange-500/80 hover:bg-orange-500"
     : "bg-rose-600/80 hover:bg-rose-600";
+};
 
 /* ─────────────────────────────── */
 /* Legend config (constant)        */
@@ -187,6 +197,7 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
               const key = buildDateKey(d);
               const log = logMap.get(key);
               const score = log?.score ?? null;
+              const isFuture = isFutureDate(d);
 
               const show =
                 hover === null ||
@@ -197,15 +208,14 @@ export default function Heatmap({ year: y, onSelectDate }: HeatmapProps) {
               return (
                 <div
                   key={key}
-                  onClick={() => click(key)}
+                  onClick={() => !isFuture && click(key)}
                   className={`
                     flex items-center justify-center
-                    w-6 h-6 rounded-sm cursor-pointer
+                    w-6 h-6 rounded-sm ${!isFuture ? 'cursor-pointer' : 'cursor-not-allowed'}
                     text-[10px] font-medium transition-all duration-150
-                    ${getColorClass(score)}
+                    ${getColorClass(score, isFuture)}
                     ${show ? "" : "opacity-30"}
-                    ${isToday ? "ring-1 ring-red-600 dark:ring-zinc-300" : ""}
-                    ${selectedDate === key ? "ring-1 ring-blue-600" : ""}
+                    ${selectedDate === key ? "ring-1 ring-blue-600" : isToday ? "ring-1 ring-red-600 dark:ring-zinc-300" : ""}
                     text-zinc-800/90 dark:text-zinc-100/90
                   `}
                   style={{ outline: "0.5px solid rgba(0,0,0,0.1)" }}

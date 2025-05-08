@@ -12,7 +12,7 @@ import {
   export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
     // If it's a protected route and the user is not logged in, redirect:
     if (isProtectedRoute(request) && !(await convexAuth.isAuthenticated())) {
-      return nextjsMiddlewareRedirect(request, "/signin");
+      return nextjsMiddlewareRedirect(request, "/");
     }
   });
   

@@ -13,6 +13,7 @@ import {
   ArrowRightToLine,
   ArrowLeftFromLine,
   PersonStanding,
+  Activity,
   CircleHelpIcon,
   ChevronUp,
   ChevronDown,
@@ -152,6 +153,13 @@ export function Sidebar({ className }: SidebarProps) {
   };
   
   const handleGoTohelp = () => {
+    // Switch to Help view
+    setView("help");
+    
+    // Close the right sidebar if it's open
+    const { setSidebarOpen } = useFeedStore.getState();
+    setSidebarOpen(false);
+    
     console.log("Help action clicked");
   };
   
@@ -168,7 +176,7 @@ export function Sidebar({ className }: SidebarProps) {
   // Items that show only if expanded
   const mainActions = [
     { id: "soloist",  label: "Soloist",        icon: PersonStanding,  action: handleSoloist, active: currentView === "soloist" },
-    { id: "testing",  label: "Testing",        icon: CircleHelpIcon,  action: handleTesting, active: currentView === "testing" },
+    { id: "testing",  label: "Playground",     icon: Activity,        action: handleTesting, active: currentView === "testing" },
     { id: "calendar", label: "Calendar",       icon: Calendar,        action: handleCalendar, active: currentView === "dashboard" },
     { id: "new-log",  label: "Create New Log", icon: Plus,            action: handleCreateNewLog, active: false },
     { id: "settings", label: "Settings",       icon: Settings,        action: handleGoToSettings },

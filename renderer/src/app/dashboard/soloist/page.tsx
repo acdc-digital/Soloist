@@ -19,6 +19,7 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useUserContext } from "@/provider/userContext";
 import WeeklyPatterns from "./_components/WeeklyPatterns";
+import { format, subDays } from 'date-fns';
 
 // Helper component for Loading State
 const LoadingState = ({ message = "Loading..." }: { message?: string }) => (
@@ -126,12 +127,20 @@ export default function SoloistPage() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(3);
   const [isGeneratingForecast, setIsGeneratingForecast] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [lastForecastDate, setLastForecastDate] = useState<string | null>(null);
+
+  // Get user's local today string
+  const localToday = format(new Date(), 'yyyy-MM-dd');
 
   // Fetch forecast data - will run even with empty userId
   const forecastData = useQuery(
     api.forecast.getSevenDayForecast,
-    userId ? { userId } : undefined
+    userId
+      ? {
+          userId,
+          today: localToday,
+        }
+      : "skip"
   );
 
   // Generate forecast mutation
@@ -142,13 +151,6 @@ export default function SoloistPage() {
     ? ((forecastData.reduce((sum, day) => sum + (day.emotionScore ?? 0), 0)) /
        (forecastData.filter(day => day.emotionScore !== null && day.emotionScore > 0).length || 1)).toFixed(1)
     : "N/A";
-
-  // Effect for resizing
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Effect to set default selected day
   useEffect(() => {
@@ -168,15 +170,30 @@ export default function SoloistPage() {
     setSelectedDayIndex(prev => Math.min(maxIndex, prev + 1));
   };
 
+  // Check if forecast was already generated today
+  const forecastGeneratedToday = lastForecastDate === localToday;
+  
+  // Check if we need forecasts (only if data is an array)
+  const needsForecasts = Array.isArray(forecastData) && forecastData.some(day =>
+    day.isFuture &&
+    (day.emotionScore === 0 || day.emotionScore === null || day.description === "Forecast Needed")
+  );
+
   // Forecast generation handler
   const handleGenerateForecast = () => {
     setForecastError(null);
     setIsGeneratingForecast(true);
-    generateForecast({ userId })
+    const today = new Date();
+    const endDate = format(today, 'yyyy-MM-dd');
+    const startDate = format(subDays(today, 3), 'yyyy-MM-dd');
+    generateForecast({ userId, startDate, endDate })
       .then(result => {
         console.log("[SoloistPage] Generation result:", result);
         if (result && !result.success) {
           setForecastError(result.error || "Failed to generate forecast");
+        } else {
+          // Update last forecast date on successful generation
+          setLastForecastDate(localToday);
         }
       })
       .catch(error => {
@@ -217,11 +234,34 @@ export default function SoloistPage() {
             error={forecastError} />;
   }
 
-  // Check if we need forecasts (only if data is an array)
-  const needsForecasts = Array.isArray(forecastData) && forecastData.some(day =>
-    day.isFuture &&
-    (day.emotionScore === 0 || day.emotionScore === null || day.description === "Forecast Needed")
-  );
+  // Ensure 'today' is always present in the forecast strip
+  const processedForecastData = Array.isArray(forecastData) ? [...forecastData] : [];
+  if (processedForecastData.length === 7) {
+    // Already 7 days, do nothing
+  } else if (processedForecastData.length === 6) {
+    // Check if today is missing
+    const hasToday = processedForecastData.some(day => day.isToday);
+    if (!hasToday) {
+      // Find the index where today should be (4th position, index 3)
+      const today = new Date(localToday + 'T00:00:00');
+      processedForecastData.splice(3, 0, {
+        date: localToday,
+        day: 'Today',
+        shortDay: format(today, 'EEE'),
+        formattedDate: format(today, 'MMM d'),
+        emotionScore: null,
+        description: 'No log for today',
+        trend: null,
+        details: 'No entry for today. Log your day to see your real score.',
+        recommendation: 'Log your day to update your forecast.',
+        isPast: false,
+        isToday: true,
+        isFuture: false,
+        canGenerateForecast: false,
+        confidence: 0,
+      });
+    }
+  }
 
   // --- Main Render - Only proceeds if userId exists and forecastData is a non-empty array ---
   return (
@@ -266,9 +306,49 @@ export default function SoloistPage() {
                 </div>
               )}
 
+              {/* Generate Forecast Button */}
+              <div className="mb-3 flex justify-between items-center">
+                {(
+                  !processedForecastData ||
+                  processedForecastData.length === 0 ||
+                  processedForecastData.every(
+                    day =>
+                      !day ||
+                      day.emotionScore === null ||
+                      day.emotionScore === undefined ||
+                      day.emotionScore === 0 ||
+                      (typeof day.description === 'string' && day.description.toLowerCase().includes('forecast needed'))
+                  )
+                ) ? (
+                  <div className="text-sm text-zinc-400 whitespace-nowrap">Submit a log to start your forecast.</div>
+                ) : <div />}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGenerateForecast}
+                          disabled={isGeneratingForecast || forecastGeneratedToday || !needsForecasts}
+                          className="text-xs"
+                        >
+                          {isGeneratingForecast ? "Generating..." : "Generate Forecast"}
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {(isGeneratingForecast || forecastGeneratedToday || !needsForecasts) && (
+                      <TooltipContent className="bg-zinc-800 border-zinc-700 text-zinc-200">
+                        Forecast has already been generated
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
               {/* 7-Day Forecast Strip */}
               <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-1 mb-2">
-                {forecastData.map((day, idx) => {
+                {processedForecastData.map((day, idx) => {
                   // Ensure day object exists before destructuring/accessing
                   if (!day) return <div key={idx} className="bg-zinc-800/10 rounded-md aspect-square"></div>; // Placeholder for bad data
 
@@ -318,7 +398,7 @@ export default function SoloistPage() {
               </div>
 
               {/* Separator, Navigation, and Details only if selected day is valid */}
-              {selectedDayIndex >= 0 && selectedDayIndex < forecastData.length && forecastData[selectedDayIndex] && (
+              {selectedDayIndex >= 0 && selectedDayIndex < processedForecastData.length && processedForecastData[selectedDayIndex] && (
                 <>
                   <Separator className="my-3 bg-zinc-200 dark:bg-zinc-800" />
 
@@ -328,16 +408,16 @@ export default function SoloistPage() {
                       <ChevronLeft className="h-4 w-4 mr-1" /> Previous
                     </Button>
                     <h3 className="text-base font-medium text-center text-zinc-900 dark:text-zinc-50">
-                      {forecastData[selectedDayIndex]?.day || "Selected Day"} - {forecastData[selectedDayIndex]?.formattedDate || ""}
+                      {processedForecastData[selectedDayIndex]?.day || "Selected Day"} - {processedForecastData[selectedDayIndex]?.formattedDate || ""}
                     </h3>
-                    <Button variant="ghost" size="sm" disabled={selectedDayIndex >= forecastData.length - 1} onClick={navigateNextDay} className="h-8 px-2 text-zinc-600 dark:text-zinc-300">
+                    <Button variant="ghost" size="sm" disabled={selectedDayIndex >= processedForecastData.length - 1} onClick={navigateNextDay} className="h-8 px-2 text-zinc-600 dark:text-zinc-300">
                       Next <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
 
                   {/* Selected Day Details */}
                   {(() => { // Immediately invoked function expression for easier variable access
-                    const selectedDay = forecastData[selectedDayIndex];
+                    const selectedDay = processedForecastData[selectedDayIndex];
                     if (!selectedDay) return null; // Should not happen due to outer check, but safe
 
                     const score = selectedDay.emotionScore;
@@ -384,7 +464,7 @@ export default function SoloistPage() {
                             {selectedDay.details || (needsGen ? "Generate forecast for details." : "No details available.")}
                             {needsGen && (
                               <div className="mt-1 text-blue-500 dark:text-blue-400">
-                                Click "{needsForecasts ? "Generate Forecast" : "Update Forecast"}" above to create predictions.
+                                Click {needsForecasts ? '"Generate Forecast"' : '"Update Forecast"'} above to create predictions.
                               </div>
                             )}
                           </div>
@@ -424,7 +504,7 @@ export default function SoloistPage() {
                 <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-50">Weekly Pattern</CardTitle>
               </CardHeader>
               <CardContent>
-                <WeeklyPatterns data={forecastData} />
+                <WeeklyPatterns data={processedForecastData} />
               </CardContent>
             </Card>
             <Card className="border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">

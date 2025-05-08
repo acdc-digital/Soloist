@@ -27,6 +27,7 @@ import SoloistPage from "./soloist/page";
 import TestingPage from "./testing/page";
 import { Loader2, ArrowRightToLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import HelpPage from "../help/page";
 
 // Responsive breakpoint for auto-collapse in pixels
 const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1256;
@@ -300,6 +301,11 @@ export default function Dashboard() {
         /* Soloist view */
         <main className="flex-1 overflow-hidden">
           <SoloistPage />
+        </main>
+      ) : currentView === "help" ? (
+        /* Help view */
+        <main className="flex-1 overflow-hidden">
+          <HelpPage />
         </main>
       ) : (
         /* Testing view */

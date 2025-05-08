@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useFeedStore } from "@/store/feedStore";
+import { addDays, format, subDays } from "date-fns";
+import { useConvex } from "convex/react";
 
 interface DailyLogFormData {
   overallMood: number;
@@ -38,6 +40,7 @@ interface DailyLogFormProps {
  * Server logic lives in `convex/dailyLogs.ts`.
  */
 export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
+  console.log("DailyLogForm mounted");
   const { user, isLoading: userLoading } = useUserContext();
 
   /* ────────────────────────────────────────── */
@@ -63,6 +66,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   const scoreDailyLog    = useAction(api.score.scoreDailyLog);
   const generateFeed     = useAction(api.feed.generateFeedForDailyLog);
   const generateForecast = useAction(api.forecast.generateForecast);
+  const convex = useConvex();
 
   const {
     register,
@@ -121,6 +125,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   /* Form submit handler                       */
   /* ────────────────────────────────────────── */
   const onSubmit = async (data: DailyLogFormData) => {
+    console.log("DailyLogForm onSubmit called", { effectiveDate, userId, data });
     setError(null);
     setIsSubmitting(true);
 
@@ -128,7 +133,26 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
       await dailyLogMutation({ date: effectiveDate, userId, answers: data });
       await scoreDailyLog({ date: effectiveDate, userId });
       await generateFeed({ date: effectiveDate, userId });
-      await generateForecast({ userId });
+
+      // --- Check if last 4 days (today + previous 3) all have logs ---
+      const today = new Date(effectiveDate);
+      const startDate = format(subDays(today, 3), 'yyyy-MM-dd');
+      const endDate = format(today, 'yyyy-MM-dd');
+      const logs = await convex.query(api.forecast.getLogsForUserInRangeSimple, {
+        userId,
+        startDate,
+        endDate,
+      });
+      console.log("Fetched logs for last 4 days:", logs);
+      const logDates = logs.map((log: { date: string }) => log.date);
+      const expectedDates = Array.from({ length: 4 }, (_, i) => format(subDays(today, 3 - i), 'yyyy-MM-dd'));
+      console.log("Expected dates:", expectedDates);
+      const allPresent = expectedDates.every(date => logDates.includes(date));
+      console.log("All present?", allPresent);
+      if (allPresent) {
+        const result = await generateForecast({ userId, startDate, endDate });
+        console.log("generateForecast result:", result);
+      }
 
       /* ───── Switch the sidebar to Feed view ───── */
       setSelectedDate(effectiveDate);

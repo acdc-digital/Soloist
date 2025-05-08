@@ -6,7 +6,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-type View = "dashboard" | "soloist" | "testing";
+type View = "dashboard" | "soloist" | "testing" | "help";
 
 interface SidebarState {
   collapsed: boolean;

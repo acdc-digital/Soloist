@@ -2,14 +2,16 @@
 // /Users/matthewsimon/Documents/Github/electron-nextjs/renderer/convex/forecast.ts
 
 import { v } from "convex/values";
+import { format } from "date-fns";
 // --- Import necessary types ---
 import {
   query,
   action,
-  internalMutation, // Use internalMutation for helpers called by actions
-  internalAction, // Although generator is separate, good practice if only called internally
+  internalMutation,
+  mutation,
 } from "./_generated/server";
-import { internal, api } from "./_generated/api"; // Need full api and internal
+import { internal } from "./_generated/api";
+import { isSameDay, differenceInCalendarDays, subDays } from 'date-fns';
 
 // Helper function to get ISO date string (YYYY-MM-DD) for a given Date
 const getISODateString = (date: Date): string => {
@@ -22,10 +24,6 @@ const addDays = (date: Date, days: number): Date => {
   result.setDate(result.getDate() + days);
   return result;
 };
-
-// --- Constants ---
-const FORECAST_DAYS = 3; // Number of days to forecast
-const MIN_LOGS_FOR_FORECAST = 4; // Minimum number of logs needed
 
 // --- Queries (Keep as they are) ---
 export const testDatabaseConnection = query({
@@ -57,306 +55,271 @@ export const getLogsForUser = query({
   },
 });
 
+// Query to get logs for a user in a date range (inclusive)
+export const getLogsForUserInRange = query({
+  args: {
+    userId: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Fetch logs as before
+    const logs = await ctx.db
+      .query("logs")
+      .withIndex("byUserDate", (q) =>
+        q.eq("userId", args.userId)
+          .gte("date", args.startDate)
+          .lte("date", args.endDate)
+      )
+      .collect();
+    // Optionally normalize dates here if needed
+    return logs.map(log => ({ ...log, date: log.date.split('T')[0] }));
+  },
+});
+
+// Query to get logs for a user in a date range (inclusive, simple version for frontend existence check)
+export const getLogsForUserInRangeSimple = query({
+  args: {
+    userId: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Fetch logs as before, but only return date
+    const logs = await ctx.db
+      .query("logs")
+      .withIndex("byUserDate", (q) =>
+        q.eq("userId", args.userId)
+          .gte("date", args.startDate)
+          .lte("date", args.endDate)
+      )
+      .collect();
+    return logs.map(log => ({ date: log.date }));
+  },
+});
+
 // Get the 7-day forecast data (UI query - keep as is)
 export const getSevenDayForecast = query({
   args: {
     userId: v.string(),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    today: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    console.log("[Query getSevenDayForecast] called for userId:", args.userId);
-    const today = new Date();
-    const todayISO = getISODateString(today);
+    const { userId, startDate, endDate, today } = args;
+    
+    // Use the passed-in today, or fallback to server date
+    const todayString = today || format(new Date(), 'yyyy-MM-dd');
+    const todayLocal = new Date(todayString + 'T00:00:00');
+    console.log("[getSevenDayForecast] Today string:", todayString);
+    console.log("[getSevenDayForecast] Today local:", todayLocal);
+    
+    // Always use same structure: 3 days before today, today, 3 days after today
+    const rangeStart = addDays(todayLocal, -3); // 3 days before today
+    const rangeEnd = todayLocal; // today
+    const forecastStart = addDays(todayLocal, 1); // tomorrow
+    const forecastEnd = addDays(todayLocal, 3); // 3 days after today
+    
+    console.log("[getSevenDayForecast] Date ranges:", {
+      rangeStart: getISODateString(rangeStart),
+      rangeEnd: getISODateString(rangeEnd),
+      forecastStart: getISODateString(forecastStart),
+      forecastEnd: getISODateString(forecastEnd)
+    });
 
-    // --- Fetch Logs ---
-    // Only include logs for today and the three immediately preceding consecutive days
+    // Fetch logs for the selected range (3 days before today + today)
     const allPastLogs = await ctx.db
       .query("logs")
       .withIndex("byUserDate", (q) =>
-        q.eq("userId", args.userId).lte("date", todayISO)
+        q.eq("userId", userId)
+         .gte("date", getISODateString(rangeStart))
+         .lte("date", getISODateString(rangeEnd))
       )
-      .order("desc")
-      .collect()
-      .then(logs => {
-        // Build a map for quick lookup
-        const logsByDate = new Map(logs.map(log => [log.date, log]));
-        const consecutiveLogs = [];
-        let currentDate = new Date(todayISO);
-        for (let i = 0; i < 4; i++) {
-          const dateStr = getISODateString(currentDate);
-          const log = logsByDate.get(dateStr);
-          if (log) {
-            consecutiveLogs.push(log);
-          } else {
-            break; // Stop at the first missing day
-          }
-          currentDate.setDate(currentDate.getDate() - 1);
-        }
-        consecutiveLogs.reverse(); // Chronological order
-        // Add canGenerateForecast flag only if all 4 days are present
-        const canGenerateForecast = consecutiveLogs.length === 4;
-        return consecutiveLogs.map(log => ({
-          ...log,
-          canGenerateForecast
-        }));
-      });
+      .order("asc")
+      .collect();
     
-    console.log("[Query getSevenDayForecast] Consecutive logs for forecast:", allPastLogs.length);
+    console.log("[getSevenDayForecast] Past logs count:", allPastLogs.length);
+    console.log("[getSevenDayForecast] Past logs dates:", allPastLogs.map((log: any) => log.date));
 
-    // --- Fetch Existing Forecasts ---
+    // Fetch existing forecasts for the forecast range (3 days after today)
     const existingForecasts = await ctx.db
       .query("forecast")
       .withIndex("byUserDate", (q) =>
-        q
-          .eq("userId", args.userId)
-          .gte("date", getISODateString(addDays(today, 1)))
-          .lte("date", getISODateString(addDays(today, FORECAST_DAYS)))
+        q.eq("userId", userId)
+          .gte("date", getISODateString(forecastStart))
+          .lte("date", getISODateString(forecastEnd))
       )
       .collect();
-    console.log("[Query getSevenDayForecast] Existing forecasts found:", existingForecasts.length);
+    
+    console.log("[getSevenDayForecast] Existing forecasts count:", existingForecasts.length);
+    console.log("[getSevenDayForecast] Existing forecast dates:", existingForecasts.map((f: any) => f.date));
 
-    // --- Format Logs ---
-    const formattedPastLogs = allPastLogs.map((log) => {
+    // Format logs
+    const formattedPastLogs = allPastLogs.map((log: any) => {
       const logDate = new Date(log.date);
+      const isToday = isSameDay(logDate, todayLocal);
       return {
         date: log.date,
-        day: getDisplayDay(logDate, today),
+        day: getDisplayDay(logDate, todayLocal),
         shortDay: getShortDay(logDate),
         formattedDate: formatMonthDay(logDate),
         emotionScore: log.score ?? null,
         description: getDescriptionFromScore(log.score),
         trend: calculateTrend(log, allPastLogs),
-        details: log.details || `Entry from ${log.date}`,
+        details: `Entry from ${log.date}`,
         recommendation: generateRecommendation(log),
-        isPast: log.date !== todayISO,
-        isToday: log.date === todayISO,
+        isPast: !isToday,
+        isToday: isToday,
         isFuture: false,
-        canGenerateForecast: log.canGenerateForecast,
+        canGenerateForecast: allPastLogs.length >= 4,
         _id: log._id,
         answers: log.answers,
       };
     });
 
-    // --- Prepare Forecast Days ---
-    const forecastDays: any[] = [];
-    const hasEnoughData = allPastLogs.length >= MIN_LOGS_FOR_FORECAST;
-    const hasConsecutiveDays = allPastLogs.every(log => log.canGenerateForecast);
-
-    for (let i = 1; i <= FORECAST_DAYS; i++) {
-      const forecastDate = addDays(today, i);
+    // Prepare forecast days
+    const forecastDays = [];
+    for (let i = 0; i < 3; i++) {
+      const forecastDate = addDays(rangeEnd, i + 1);
       const forecastDateISO = getISODateString(forecastDate);
       const existingForecast = existingForecasts.find(f => f.date === forecastDateISO);
-
-      if (existingForecast) {
-        forecastDays.push({
-          date: existingForecast.date,
-          day: getDisplayDay(forecastDate, today),
-          shortDay: getShortDay(forecastDate),
-          formattedDate: formatMonthDay(forecastDate),
-          emotionScore: existingForecast.emotionScore,
-          description: existingForecast.description,
-          trend: existingForecast.trend,
-          details: existingForecast.details,
-          recommendation: existingForecast.recommendation,
-          isPast: false, isToday: false, isFuture: true,
-          confidence: existingForecast.confidence,
-        });
-      } else if (hasEnoughData && hasConsecutiveDays) {
-        // Need forecast placeholder
-        forecastDays.push({
-          date: forecastDateISO,
-          day: getDisplayDay(forecastDate, today),
-          shortDay: getShortDay(forecastDate),
-          formattedDate: formatMonthDay(forecastDate),
-          emotionScore: 0,
-          description: "Forecast Needed",
-          trend: "stable",
-          details: "Forecast data will be generated soon.",
-          recommendation: "Click 'Generate Forecast' to see prediction.",
-          isPast: false, isToday: false, isFuture: true,
-          confidence: 0,
-        });
-      } else {
-        // Not enough data or non-consecutive days placeholder
-        forecastDays.push({
-          date: forecastDateISO,
-          day: getDisplayDay(forecastDate, today),
-          shortDay: getShortDay(forecastDate),
-          formattedDate: formatMonthDay(forecastDate),
-          emotionScore: null,
-          description: hasConsecutiveDays ? "Need More Data" : "Need Consecutive Days",
-          trend: "stable",
-          details: hasConsecutiveDays 
-            ? `Complete at least ${MIN_LOGS_FOR_FORECAST} daily logs to see your forecast.`
-            : "You need 4 consecutive days of logs to generate a forecast.",
-          recommendation: "Continue logging your daily experiences.",
-          isPast: false, isToday: false, isFuture: true,
-          confidence: 0,
-        });
-      }
+      forecastDays.push(existingForecast ? {
+        date: existingForecast.date,
+        day: getDisplayDay(forecastDate, todayLocal),
+        shortDay: getShortDay(forecastDate),
+        formattedDate: formatMonthDay(forecastDate),
+        emotionScore: existingForecast.emotionScore,
+        description: existingForecast.description,
+        trend: existingForecast.trend,
+        details: existingForecast.details,
+        recommendation: existingForecast.recommendation,
+        isPast: false, isToday: false, isFuture: true,
+        confidence: existingForecast.confidence,
+      } : {
+        date: forecastDateISO,
+        day: getDisplayDay(forecastDate, todayLocal),
+        shortDay: getShortDay(forecastDate),
+        formattedDate: formatMonthDay(forecastDate),
+        emotionScore: 0,
+        description: "Forecast Needed",
+        trend: "stable",
+        details: "Forecast data will be generated soon.",
+        recommendation: "Click 'Generate Forecast' to see prediction.",
+        isPast: false, isToday: false, isFuture: true,
+        confidence: 0,
+      });
     }
 
-    // --- Combine and Finalize Days ---
-    // Take relevant past days (today + last 3 days)
-    const relevantPastDays = formattedPastLogs
-      .sort((a, b) => a.date.localeCompare(b.date)) // Sort oldest to newest
-      .slice(-4); // Get the last 4 entries (today + 3 previous days)
-
-    // Combine with forecast days
-    let allDays = [...relevantPastDays, ...forecastDays];
-
-    // Ensure exactly 7 days if necessary, adding missing past placeholders
-    const expectedDays = 7;
-    if (allDays.length < expectedDays) {
-      const missingPastCount = expectedDays - allDays.length;
-      const firstDateInList = new Date(allDays[0]?.date || todayISO);
-      for (let i = 1; i <= missingPastCount; i++) {
-        const missingDate = addDays(firstDateInList, -i);
-        allDays.unshift({
-          date: getISODateString(missingDate),
-          day: getDisplayDay(missingDate, today),
-          shortDay: getShortDay(missingDate),
-          formattedDate: formatMonthDay(missingDate),
-          emotionScore: null,
-          description: "No Data",
-          trend: "stable",
-          details: "No log entry found for this day.",
-          recommendation: "Add a log entry to see insights.",
-          isPast: true,
-          isToday: false,
-          isFuture: false,
-        });
-      }
-    }
-
-    // Ensure the final array has exactly 7 days, taking the most recent
-    const finalDays = allDays.slice(-expectedDays);
-
-    console.log("[Query getSevenDayForecast] Final days to return:", finalDays.length);
-    return finalDays;
+    // Combine logs and forecast days
+    return [...formattedPastLogs, ...forecastDays];
   }
 });
 
 
 // --- ACTION: Generate forecast for a user ---
 export const generateForecast = action({
-  args: { userId: v.string() },
+  args: {
+    userId: v.string(),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    console.log("[Action generateForecast] called for userId:", args.userId);
-
-    if (!args.userId || args.userId.trim() === "") {
-       console.error("[Action generateForecast] Error: Received empty or invalid userId.");
-       return { success: false, error: "Backend Error: User ID was missing or empty." };
-    }
-
+    const { userId, startDate: providedStartDate, endDate: providedEndDate } = args;
+    
+    // Get today's date if not provided
     const today = new Date();
-    const todayISO = getISODateString(today);
-
-    // 1. Fetch past logs using runQuery
-    const pastLogs = await ctx.runQuery(api.forecast.getLogsForUser, {
-       userId: args.userId,
-       endDate: todayISO,
+    const todayStr = format(today, 'yyyy-MM-dd');
+    
+    // Use provided dates or default to today and 3 days prior
+    const endDate = providedEndDate || todayStr;
+    const startDate = providedStartDate || format(subDays(new Date(endDate), 3), 'yyyy-MM-dd');
+    
+    console.log("[generateForecast] Using date range:", { startDate, endDate, today: todayStr });
+    
+    const rangeStart = new Date(startDate);
+    const rangeEnd = new Date(endDate);
+    
+    // Build all dates in the range (inclusive)
+    const allDates = [];
+    for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+      allDates.push(getISODateString(d));
+    }
+    
+    // Fetch all logs for the user in the range using runQuery
+    const logs = await ctx.runQuery(internal.forecast.getLogsForUserInRange, {
+      userId,
+      startDate: getISODateString(rangeStart),
+      endDate: getISODateString(rangeEnd),
     });
-
-    // Only use logs for today and the three immediately preceding consecutive days
-    const logsByDate = new Map(pastLogs.map(log => [log.date, log]));
-    const consecutiveLogs = [];
-    let currentDate = new Date(todayISO);
-    for (let i = 0; i < 4; i++) {
-      const dateStr = getISODateString(currentDate);
-      const log = logsByDate.get(dateStr);
-      if (log) {
-        consecutiveLogs.push(log);
-      } else {
-        break;
-      }
-      currentDate.setDate(currentDate.getDate() - 1);
+    
+    // Print raw log dates
+    console.log("[generateForecast] Fetched logs (raw):", logs.map((log: { date: string }) => log.date));
+    
+    // Normalize log dates to YYYY-MM-DD
+    const logDates = logs.map((log: { date: string }) => log.date.split('T')[0]);
+    console.log("[generateForecast] Normalized logDates:", logDates);
+    
+    // Check if all required dates have logs
+    const missingDates = allDates.filter(date => !logDates.includes(date));
+    console.log("[generateForecast] Checked dates:", allDates);
+    console.log("[generateForecast] Found log dates:", logDates);
+    console.log("[generateForecast] Missing log dates:", missingDates);
+    
+    if (missingDates.length > 0) {
+      return { success: false, error: `Missing logs for: ${missingDates.join(", ")}` };
     }
-    consecutiveLogs.reverse();
-
-    if (consecutiveLogs.length < 4) {
-      const errorMsg = `Not enough consecutive data (${consecutiveLogs.length}/4 days) for forecast`;
-      console.log(`[Action generateForecast] ${errorMsg}`);
-      return { success: false, error: errorMsg };
-    }
-
-    // Prepare data for the generator action
-    const simplifiedLogs = consecutiveLogs.map(log => ({
+    
+    // Use only the logs in the selected range, sorted by date ascending
+    const sortedLogs = logs.sort((a: any, b: any) => a.date.localeCompare(b.date));
+    
+    // Generate target dates (next 3 days after endDate/today)
+    const forecastEnd = new Date(endDate);
+    const targetDates = Array.from({ length: 3 }, (_, i) => {
+      const date = new Date(forecastEnd);
+      date.setDate(date.getDate() + i + 1);
+      return getISODateString(date);
+    });
+    
+    console.log("[generateForecast] Generating forecasts for target dates:", targetDates);
+    
+    // Map logs to only include allowed fields for the generator
+    const simplifiedLogs = sortedLogs.map((log: any) => ({
       date: log.date,
       score: log.score ?? 0,
       activities: (typeof log.answers === 'object' && log.answers?.activities) ? log.answers.activities : [],
-      notes: typeof log.answers === 'string' ? log.answers : JSON.stringify(log.answers ?? {})
+      notes: typeof log.answers === 'string' ? log.answers : JSON.stringify(log.answers ?? {}),
     }));
-
-    // Generate target dates
-    const targetDates = Array.from({ length: FORECAST_DAYS }, (_, i) => getISODateString(addDays(today, i + 1)));
-
-    console.log("[Action generateForecast] Target dates for forecast:", targetDates);
-
-    try {
-      // 2. Call the generator action using ctx.runAction
-      console.log(`[Action generateForecast] Calling generator.generateForecastWithAI for user ${args.userId}`);
-      const forecasts = await ctx.runAction(internal.generator.generateForecastWithAI, {
-        userId: args.userId,
-        pastLogs: simplifiedLogs,
-        targetDates
+    
+    const forecasts = await ctx.runAction(internal.generator.generateForecastWithAI, {
+      userId,
+      pastLogs: simplifiedLogs,
+      targetDates,
+    });
+    
+    console.log("[generateForecast] Generated forecasts:", forecasts.length);
+    
+    // Save forecasts
+    for (const forecast of forecasts) {
+      await ctx.runMutation(internal.forecast.deleteExistingForecast, {
+        userId,
+        date: forecast.date,
       });
-
-      if (!Array.isArray(forecasts)) {
-         console.error("[Action generateForecast] Generator did not return an array:", forecasts);
-         throw new Error("Forecast generation returned invalid data.");
-      }
-      console.log(`[Action generateForecast] Received ${forecasts.length} forecasts from generator for user ${args.userId}`);
-
-      // 3. Save forecasts to database using runMutation
-      const savedForecasts = [];
-      for (const forecast of forecasts) {
-        // Basic validation
-        if (!forecast || typeof forecast.date !== 'string' || typeof forecast.emotionScore !== 'number') {
-           console.warn("[Action generateForecast] Skipping invalid forecast object from generator:", forecast);
-           continue;
-        }
-
-        console.log(`[Action generateForecast] Saving forecast via mutation for date: ${forecast.date} for user ${args.userId}`);
-
-        // Delete existing first (atomic within its mutation)
-        await ctx.runMutation(internal.forecast.deleteExistingForecast, {
-           userId: args.userId,
-           date: forecast.date
-        });
-
-        // Insert new forecast (atomic within its mutation)
-        const forecastId = await ctx.runMutation(internal.forecast.insertForecast, {
-          userId: args.userId,
-          date: forecast.date,
-          emotionScore: forecast.emotionScore,
-          description: forecast.description || "N/A",
-          trend: forecast.trend || "stable",
-          details: forecast.details || "",
-          recommendation: forecast.recommendation || "",
-          confidence: forecast.confidence || 0,
-          basedOnDays: consecutiveLogs.map(log => log.date), // Only include the last 4 days
-        });
-
-        console.log(`[Action generateForecast] Saved forecast ID ${forecastId} for user ${args.userId}`);
-        if (forecastId) {
-           savedForecasts.push({
-             _id: forecastId,
-             date: forecast.date,
-             score: forecast.emotionScore
-           });
-        }
-      }
-
-      console.log(`[Action generateForecast] Successfully saved ${savedForecasts.length} forecasts for user ${args.userId}`);
-      return { success: true, forecasts: savedForecasts };
-
-    } catch (error: any) {
-      console.error(`[Action generateForecast] Error during forecast generation/saving for user ${args.userId}:`, error);
-      return {
-        success: false,
-        error: `Failed to generate forecast: ${error.message}`
-      };
+      await ctx.runMutation(internal.forecast.insertForecast, {
+        userId,
+        date: forecast.date,
+        emotionScore: forecast.emotionScore,
+        description: forecast.description || "N/A",
+        trend: forecast.trend || "stable",
+        details: typeof forecast.details === 'string' ? forecast.details : "",
+        recommendation: forecast.recommendation || "",
+        confidence: forecast.confidence || 0,
+        basedOnDays: sortedLogs.map((log: any) => log.date),
+      });
     }
+    
+    console.log("[generateForecast] Successfully saved forecasts for days:", targetDates);
+    return { success: true, forecastDates: targetDates };
   }
 });
 
@@ -440,12 +403,10 @@ function generateRecommendation(log: any) {
 }
 
 function getDisplayDay(date: Date, today: Date) {
-  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const compareDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const dayDiff = Math.round((compareDateOnly.getTime() - todayDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-  if (dayDiff === 0) return "Today";
-  if (dayDiff === 1) return "Tomorrow";
-  if (dayDiff === -1) return "Yesterday";
+  // Compare only the date part (local time)
+  if (isSameDay(date, today)) return "Today";
+  if (differenceInCalendarDays(date, today) === 1) return "Tomorrow";
+  if (differenceInCalendarDays(date, today) === -1) return "Yesterday";
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   return days[date.getDay()];
 }
@@ -459,3 +420,59 @@ function formatMonthDay(date: Date) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[date.getMonth()]} ${date.getDate()}`;
 }
+
+// --- Forecast Feedback ---
+export const submitForecastFeedback = mutation({
+  args: {
+    userId: v.string(),
+    forecastDate: v.string(),
+    feedback: v.union(v.literal("up"), v.literal("down")),
+  },
+  handler: async (ctx, args) => {
+    // Upsert feedback for this user/date
+    const existing = await ctx.db
+      .query("forecastFeedback")
+      .withIndex("byUserDate", q =>
+        q.eq("userId", args.userId).eq("forecastDate", args.forecastDate)
+      )
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        feedback: args.feedback,
+        updatedAt: Date.now(),
+      });
+      return { updated: true };
+    } else {
+      await ctx.db.insert("forecastFeedback", {
+        userId: args.userId,
+        forecastDate: args.forecastDate,
+        feedback: args.feedback,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return { created: true };
+    }
+  },
+});
+
+export const getForecastFeedback = query({
+  args: {
+    userId: v.string(),
+    forecastDates: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Fetch all feedback for this user and the given dates
+    const feedbacks = await ctx.db
+      .query("forecastFeedback")
+      .withIndex("byUserDate", q => q.eq("userId", args.userId))
+      .collect();
+    // Filter for only the requested dates
+    const filtered = feedbacks.filter(fb => args.forecastDates.includes(fb.forecastDate));
+    // Return as a map: { [date]: feedback }
+    const feedbackMap: Record<string, "up" | "down"> = {};
+    for (const fb of filtered) {
+      feedbackMap[fb.forecastDate] = fb.feedback;
+    }
+    return feedbackMap;
+  },
+});

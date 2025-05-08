@@ -3,6 +3,7 @@
 
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * 1) listDailyLogs query:
@@ -43,7 +44,27 @@ export const getDailyLog = query({
 });
 
 /**
- * 3) dailyLog mutation:
+ * 3) getLogsByDateRange query:
+ * Fetch all daily logs for a user between two ISO dates (inclusive).
+ */
+export const getLogsByDateRange = query({
+  args: {
+    userId: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  handler: async ({ db }, { userId, startDate, endDate }) => {
+    return await db
+      .query("logs")
+      .filter(q => q.eq(q.field("userId"), userId))
+      .filter(q => q.gte(q.field("date"), startDate))
+      .filter(q => q.lte(q.field("date"), endDate))
+      .collect();
+  },
+});
+
+/**
+ * 4) dailyLog mutation:
  * Upserts a daily log record. If a log with (userId, date)
  * already exists, patch it; otherwise insert a new record.
  */
@@ -143,11 +164,15 @@ export const getLogById = query({
   handler: async ({ db }, { logId }) => {
     try {
       // Try to convert to a valid ID
-      const id = logId.includes('/') ? logId : logId;
-      // Use a type assertion to handle the ID type
-      return await db.get(id as any);
+      // Assuming logId might or might not be a full Id string like "logs/abcdef"
+      // If it's just "abcdef", db.get might need it to be prefixed or it might handle it.
+      // However, the core issue is the type, Id<"logs"> is correct.
+      const id = logId as Id<"logs">; // Directly cast to Id<"logs">
+      return await db.get(id);
     } catch (err) {
       console.error("Error getting log by ID:", err);
+      // It's possible the ID string format is incorrect or document doesn't exist.
+      // Returning null is a reasonable way to handle this.
       return null;
     }
   },

@@ -18,6 +18,8 @@ import { api } from "../../convex/_generated/api";
 // A strongly‑typed user object we pass around the app
 interface AppUser {
   id: string;
+  authId?: string;
+  _id?: string;
   name: string;
   email: string;
   avatarUrl?: string;

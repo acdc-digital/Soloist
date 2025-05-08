@@ -72,6 +72,15 @@ const schema = defineSchema({
   })
   .index("byUserId", ["userId"]),
 
+  forecastFeedback: defineTable({
+    userId: v.string(),
+    forecastDate: v.string(),
+    feedback: v.union(v.literal("up"), v.literal("down")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("byUserDate", ["userId", "forecastDate"]),
+
   // other tables...
 });
 

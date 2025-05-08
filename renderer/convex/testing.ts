@@ -1,5 +1,39 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { isSameDay, differenceInCalendarDays } from 'date-fns';
+
+// Helper function to get ISO date string (YYYY-MM-DD) for a given Date - Copied from forecast.ts
+const getISODateString = (date: Date): string => {
+  return date.toISOString().split("T")[0];
+};
+
+// Helper function to add days to a date - Copied from forecast.ts
+const addDays = (date: Date, days: number): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+// Helper function to get display day name (Today, Tomorrow, Yesterday, or full day name) - Copied from forecast.ts
+function getDisplayDay(date: Date, today: Date) {
+  // Compare only the date part (local time)
+  if (isSameDay(date, today)) return "Today";
+  if (differenceInCalendarDays(date, today) === 1) return "Tomorrow";
+  if (differenceInCalendarDays(date, today) === -1) return "Yesterday";
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  return days[date.getDay()];
+}
+
+// Helper function to get short day name (Sun, Mon, etc.) - Copied from forecast.ts
+function getShortDay(date: Date) {
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return days[date.getDay()];
+}
+
+// Helper function to format date as Month Day (e.g., "May 4") - Copied from forecast.ts
+function formatMonthDay(date: Date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 /**
  * getTestSevenDayForecast: returns a clean 7-day array mixing real historical logs
@@ -9,7 +43,7 @@ export const getTestSevenDayForecast = query({
   args: { userId: v.string(), startDate: v.string(), endDate: v.string() },
   handler: async ({ db }, { userId, startDate, endDate }) => {
     // Parse ISO date strings and ensure consistent format (YYYY-MM-DD)
-    startDate = startDate.slice(0, 10); // Normalize to YYYY-MM-DD 
+    startDate = startDate.slice(0, 10); // Normalize to YYYY-MM-DD
     endDate = endDate.slice(0, 10);     // Normalize to YYYY-MM-DD
     
     // Create date objects with time set to midnight
@@ -46,11 +80,25 @@ export const getTestSevenDayForecast = query({
       logs.map(l => [l.date.slice(0, 10), l.score ?? null])
     );
 
-    const result: any[] = [];
+    // Fetch historical forecasts for the 4-day past period (startDate to endDate)
+    // These are forecasts that *were* made for these dates when they were future.
+    const historicalForecastRecords = await db.query("forecast")
+      .filter(q => q.eq(q.field("userId"), userId))
+      .filter(q => q.gte(q.field("date"), startDate))
+      .filter(q => q.lte(q.field("date"), endDate))
+      .collect();
+
+    const historicalForecastMap = new Map<string, number | null>(
+      historicalForecastRecords.map(f => [f.date.slice(0, 10), f.emotionScore ?? null])
+    );
+    console.log(`Found ${historicalForecastRecords.length} historical forecast records for the past 4 days.`);
+
+    const sevenDayData: any[] = []; // Renamed 'result' to 'sevenDayData' for clarity
     
     // BUILD EXACTLY 4 DAYS OF PAST DATA (from startDate to endDate, inclusive)
     console.log("Building past days from", start.toLocaleDateString(), "to", end.toLocaleDateString());
     
+    const referenceToday = end; // For getDisplayDay
     // Non-mutating approach for date iteration - create fresh date objects each time
     for (let i = 0; i <= Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)); i++) {
       const d = new Date(start);
@@ -62,11 +110,14 @@ export const getTestSevenDayForecast = query({
       const score = logMap.get(iso) ?? null;
       console.log(`Adding past day ${i+1}: ${iso} - ${d.toLocaleDateString()} (${d.toLocaleDateString('en-US', { weekday: 'long' })}) - Score: ${score}`);
       
-      result.push({
+      sevenDayData.push({
         date: iso,
+        day: getDisplayDay(d, referenceToday),
+        shortDay: getShortDay(d),
+        formattedDate: formatMonthDay(d),
         emotionScore: score,
-        isToday: false,
-        isPast: true,
+        isToday: isSameDay(d, referenceToday),
+        isPast: d < referenceToday && !isSameDay(d, referenceToday),
         isFuture: false,
       });
     }
@@ -89,8 +140,11 @@ export const getTestSevenDayForecast = query({
         .first();
       
       if (forecast) {
-        result.push({
+        sevenDayData.push({
           date: iso,
+          day: getDisplayDay(d, referenceToday),
+          shortDay: getShortDay(d),
+          formattedDate: formatMonthDay(d),
           emotionScore: forecast.emotionScore,
           isToday: false,
           isPast: false,
@@ -102,8 +156,11 @@ export const getTestSevenDayForecast = query({
           confidence: forecast.confidence ?? null,
         });
       } else {
-        result.push({
+        sevenDayData.push({
           date: iso,
+          day: getDisplayDay(d, referenceToday),
+          shortDay: getShortDay(d),
+          formattedDate: formatMonthDay(d),
           emotionScore: null,
           isToday: false,
           isPast: false,
@@ -117,17 +174,30 @@ export const getTestSevenDayForecast = query({
       }
     }
 
+    // Prepare the historicalForecasts array for the chart
+    const historicalForecasts: { date: string; emotionScore: number | null }[] = [];
+    for (let i = 0; i <= Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)); i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const iso = d.toISOString().slice(0, 10);
+      historicalForecasts.push({
+        date: iso,
+        emotionScore: historicalForecastMap.get(iso) ?? null,
+      });
+    }
+    console.log("Prepared historicalForecasts for chart:", historicalForecasts);
+
     // Final verification of dates
-    if (result.length > 0) {
+    if (sevenDayData.length > 0) {
       console.log("Result verification:", {
-        firstDay: result[0].date,
-        firstDayParsed: new Date(result[0].date).toLocaleDateString(),
+        firstDay: sevenDayData[0].date,
+        firstDayParsed: new Date(sevenDayData[0].date).toLocaleDateString(),
         expectedFirstDay: start.toLocaleDateString(),
-        daysTotal: result.length
+        daysTotal: sevenDayData.length
       });
     }
     
-    console.log(`Returning ${result.length} days total`);
-    return result;
+    console.log(`Returning ${sevenDayData.length} days for sevenDayData`);
+    return { sevenDayData, historicalForecasts };
   }
 }); 

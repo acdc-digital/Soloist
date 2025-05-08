@@ -21,10 +21,13 @@ import { api as dailyApi } from "../../../../convex/_generated/api"; // alias fo
 import { useUserContext } from "@/provider/userContext";
 import WeeklyPatterns from "./_components/WeeklyPatterns";
 import Navigation from "./_components/Navigation";
+import Consult from "./_components/Consult";
+import Insights from "./_components/Insights";
 import { getColorClass } from "@/lib/scoreColors";
 import { useTestingStore } from "../../../store/Testingstore";
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { api as testingApi } from "../../../../convex/_generated/api";
+import { api as forecastApi } from "../../../../convex/_generated/api"; // Added alias for forecast API
 
 // Types for forecast data
 interface ForecastDay {
@@ -41,6 +44,12 @@ interface ForecastDay {
   recommendation?: string;
   trend?: string | null;
   confidence?: number;
+}
+
+// Define the expected return type from the getTestSevenDayForecast query
+interface SevenDayForecastResult {
+  sevenDayData: ForecastDay[]; // Using existing ForecastDay interface
+  historicalForecasts: { date: string; emotionScore: number | null }[];
 }
 
 // Helper component for Loading State
@@ -205,8 +214,8 @@ export default function TestingPage() {
   console.log("userId", userId);
   console.log("selectedDateRange", selectedDateRange);
 
-  // Fetch raw forecast data and log it for debugging
-  const forecastDataFromAPI = useQuery(
+  // Fetch the main 7-day data (includes historical logs + future forecasts)
+  const sevenDayResult = useQuery(
     testingApi.testing.getTestSevenDayForecast,
     userId && selectedDateRange.start && selectedDateRange.end
       ? {
@@ -215,7 +224,11 @@ export default function TestingPage() {
           endDate: formatDateString(selectedDateRange.end),
         }
       : "skip"
-  );
+  ) as SevenDayForecastResult | null | undefined;
+
+  // Use the results for display data and historical forecasts
+  const formattedDisplayData = useMemo(() => sevenDayResult?.sevenDayData || [], [sevenDayResult]);
+  const historicalForecasts = useMemo(() => sevenDayResult?.historicalForecasts || [], [sevenDayResult]);
 
   // Log query params and raw API response for debugging
   useEffect(() => {
@@ -229,25 +242,15 @@ export default function TestingPage() {
       });
     }
     
-    if (forecastDataFromAPI) {
-      console.log("RAW forecastDataFromAPI:", JSON.stringify(forecastDataFromAPI, null, 2));
-      
-      // Parse and log date details if data is an array
-      if (Array.isArray(forecastDataFromAPI)) {
-        const dateDetails = forecastDataFromAPI.map(day => ({
-          date: day.date,
-          parsedDate: parseISODate(day.date).toLocaleDateString(),
-          dayOfWeek: parseISODate(day.date).toLocaleDateString('en-US', { weekday: 'long' }),
-          emotionScore: day.emotionScore,
-          isPast: day.isPast,
-          isFuture: day.isFuture,
-        }));
-        console.log("Parsed forecast dates:", dateDetails);
-      }
+    if (sevenDayResult) {
+      console.log("RAW testingApi.testing.getTestSevenDayForecast RESULT:", JSON.stringify(sevenDayResult, null, 2));
     }
-  }, [forecastDataFromAPI, userId, selectedDateRange]);
+     if (historicalForecasts.length > 0) {
+      console.log("Parsed Historical Forecasts for chart:", historicalForecasts);
+    }
+  }, [sevenDayResult, userId, selectedDateRange, historicalForecasts]);
 
-  // Fetch historical logs for the selected date range
+  // Fetch raw historical logs (might be redundant if already in sevenDayResult, but kept for now)
   const historicalLogs = useQuery(
     dailyApi.dailyLogs.getLogsByDateRange,
     userId && selectedDateRange.start && selectedDateRange.end
@@ -259,18 +262,8 @@ export default function TestingPage() {
       : "skip"
   ) as { date: string; emotionScore: number; description?: string; details?: string }[] | undefined;
 
-  const forecastData = useMemo(() => {
-    if (!forecastDataFromAPI || !Array.isArray(forecastDataFromAPI)) return [];
-    return forecastDataFromAPI.map((day, idx) => {
-      const dateObj = parseISODate(day.date);
-      return {
-        ...day,
-        day: getDayName(dateObj),
-        shortDay: getShortDayName(dateObj),
-        formattedDate: getFormattedMonthDay(dateObj),
-      };
-    });
-  }, [forecastDataFromAPI]);
+  // Simplified display data variable
+  const displayData = formattedDisplayData;
 
   // Generate test forecast mutation
   const generateForecast = useAction(api.forecast.generateForecast);
@@ -369,7 +362,7 @@ export default function TestingPage() {
         // If the error mentions missing logs, let's update the error message
         if (result.error && result.error.includes("Missing logs")) {
           setForecastError(
-            "It looks like logs exist but aren't being recognized. Please try regenerating the forecast."
+            "A log may not be available within the selected date range. Please add logs for the missing days."
           );
         }
       } else {
@@ -388,36 +381,6 @@ export default function TestingPage() {
       setIsGeneratingForecast(false);
     }
   };
-
-  // Replace the displayData function to use dates directly from API without manipulation
-  const displayData = useMemo(() => {
-    if (!forecastData || !Array.isArray(forecastData) || forecastData.length === 0) {
-      return [];
-    }
-    
-    // Simply use the data directly from the API, which has the correct dates
-    console.log("Using direct API data:", forecastData.map(d => d.date)); 
-    return forecastData;
-  }, [forecastData]);
-
-  // Ensure date formatting is preserved
-  const formattedDisplayData = useMemo(() => {
-    if (!Array.isArray(displayData)) return [];
-    
-    return displayData.map(day => {
-      // Parse the date directly from the API date string
-      // Fix: using helper function for consistent date parsing
-      const dateObj = parseISODate(day.date);
-      
-      return {
-        ...day,
-        // Ensure day and date attributes are present
-        day: day.day || getDayName(dateObj),
-        shortDay: day.shortDay || getShortDayName(dateObj),
-        formattedDate: day.formattedDate || getFormattedMonthDay(dateObj)
-      };
-    });
-  }, [displayData]);
 
   // Calculate average score safely
   const averageScore = useMemo(() => {
@@ -495,31 +458,32 @@ export default function TestingPage() {
     return <LoadingState message="Loading user…" />;
   }
 
-  // Wait for forecast data
-  if (forecastData === undefined) {
+  // CORRECTED: Wait for the main query result
+  if (sevenDayResult === undefined) {
     return <LoadingState message="Loading forecast data..." />;
   }
 
-  // Handle empty data case - but don't block on authentication
-  if (forecastData === null) {
+  // CORRECTED: Handle error case where the query returned null
+  if (sevenDayResult === null) {
     return <EmptyState
             title="Test Forecast Not Available"
             description="Error retrieving test forecast data."
-            onGenerate={() => handleGenerateForecast()}
+            onGenerate={() => handleGenerateForecast()} // Keep using handleGenerateForecast for the button
             isGenerating={isGeneratingForecast}
-            error={forecastError} />;
+            error={forecastError || "Query returned null"} /> // Show specific error if available
   }
 
-  if (Array.isArray(forecastData) && forecastData.length === 0) {
+  // CORRECTED: Handle empty data case using the parsed array
+  if (Array.isArray(formattedDisplayData) && formattedDisplayData.length === 0) {
     return <EmptyState
             title="No Test Forecast Data Available"
-            description="You need to generate a test forecast."
+            description="You need to generate a test forecast or ensure logs exist for the selected period."
             onGenerate={() => handleGenerateForecast()}
             isGenerating={isGeneratingForecast}
             error={forecastError} />;
   }
 
-  // --- Main Render - Only proceeds if userId exists and forecastData is a non-empty array ---
+  // --- Main Render (uses formattedDisplayData) ---
   return (
     <div className="flex-1 h-full flex flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-900">
       <div className="flex-1 overflow-auto">
@@ -599,8 +563,8 @@ export default function TestingPage() {
               
               {/* 7-Day Forecast Strip */}
               <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-1 mb-2">
-                {[...Array(7)].map((_, idx) => {
-                  const day = formattedDisplayData[idx];
+                {[...Array(7)].map((_, idx: number) => {
+                  const day: ForecastDay | undefined = formattedDisplayData[idx];
                   if (!day) {
                     // Render placeholder for missing day
                     return (
@@ -726,9 +690,9 @@ export default function TestingPage() {
                   </div>
 
                   {/* Selected Day Details */}
-                  {(() => { // Immediately invoked function expression for easier variable access
+                  {(() => {
                     const selectedDay = formattedDisplayData[selectedDayIndex];
-                    if (!selectedDay) return null; // Should not happen due to outer check, but safe
+                    if (!selectedDay) return null;
 
                     const score = selectedDay.emotionScore;
                     const isFutureDay = selectedDay.isFuture;
@@ -765,44 +729,26 @@ export default function TestingPage() {
                              )}
                           </div>
                         </div>
-                        {/* Text Details */}
+                        {/* Text Details replaced by Consult component */}
                         <div className="flex-1">
-                          <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50 mb-1">
-                            {selectedDay.description || "No description"}
-                          </h3>
-                          <div className="text-sm text-zinc-700 dark:text-zinc-300 mb-3 min-h-[3em]">
-                            {selectedDay.details || (needsGen ? "Generate forecast for details." : "No details available.")}
-                            {needsGen && (
-                              <div className="mt-1 text-blue-500 dark:text-blue-400">
-                                Click &quot;{needsForecasts ? "Generate Forecast" : "Update Forecast"}&quot; above to create predictions.
-                              </div>
-                            )}
-                          </div>
-                          {/* Recommendation */}
-                          {(selectedDay.recommendation && selectedDay.recommendation !== "Check back later for recommendations") && (
-                            <div className="bg-zinc-100 dark:bg-zinc-800/70 p-2 rounded-md">
-                              <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-1 flex items-center">
-                                <Sparkles className="h-4 w-4 mr-1.5 text-blue-500" />
-                                Recommendation:
-                              </h4>
-                              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                {selectedDay.recommendation}
-                              </p>
-                            </div>
-                          )}
-                          {/* Confidence */}
-                          {isFutureDay && 'confidence' in selectedDay && selectedDay.confidence != null && selectedDay.confidence > 0 && (
-                            <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 flex items-center">
-                              <Info className="h-3 w-3 mr-1 inline-block" />
-                              Forecast confidence: {selectedDay.confidence}%
+                          {userId && selectedDay && selectedDateRange.start && selectedDateRange.end ? (
+                            <Consult
+                              userId={userId}
+                              selectedDay={selectedDay}
+                              selectedDateRange={selectedDateRange}
+                              sevenDayData={formattedDisplayData}
+                            />
+                          ) : (
+                            <div className="p-4 text-center text-zinc-500">
+                              Select a day to see details.
                             </div>
                           )}
                         </div>
                       </div>
                     );
-                  })()} {/* End IIFE */}
+                  })()}
                 </>
-              )} {/* End conditional render for details */}
+              )}
 
             </CardContent>
           </Card>
@@ -815,7 +761,7 @@ export default function TestingPage() {
               </CardHeader>
               <CardContent>
                 {Array.isArray(formattedDisplayData) && formattedDisplayData.length > 0 ? (
-                  <WeeklyPatterns data={formattedDisplayData} />
+                  <WeeklyPatterns data={formattedDisplayData} historicalForecastData={historicalForecasts} />
                 ) : (
                   <div className="text-center text-zinc-500 py-10">No data available</div>
                 )}
@@ -826,20 +772,31 @@ export default function TestingPage() {
                 <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-50">Key Insights</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
-                  {mockInsights.map((insight, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-                      <ArrowRight className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
-                      <span>{insight}</span>
-                    </li>
-                  ))}
-                </ul>
+                {userId && Array.isArray(formattedDisplayData) && formattedDisplayData.length > 0 && selectedDateRange.start && selectedDateRange.end ? (
+                  <Insights 
+                    userId={userId} 
+                    sevenDayData={formattedDisplayData} 
+                    selectedDateRange={selectedDateRange} 
+                  />
+                ) : (
+                  <div className="text-center text-zinc-500 py-10">
+                    {/* Display mock insights if not enough data for the real component */}
+                    <ul className="space-y-2">
+                      {mockInsights.map((insight, index) => (
+                        <li key={index} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                          <ArrowRight className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
+                          <span>{insight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-        </div> {/* End container */}
-      </div> {/* End scrollable area */}
-    </div> // End main wrapper
+        </div>
+      </div>
+    </div>
   );
 }

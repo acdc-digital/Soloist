@@ -22,7 +22,9 @@ export default function Navigation({ onGenerateForecast }: NavigationProps) {
     setSelectedDateRange,
     isGeneratingForecast,
     forecastGenerated,
-    resetState
+    resetState,
+    clearDailyDetailsCache,
+    clearWeeklyInsightsCache
   } = useTestingStore();
   
   const [isOpen, setIsOpen] = useState(false);
@@ -67,20 +69,17 @@ export default function Navigation({ onGenerateForecast }: NavigationProps) {
     setTempRange({ from, to });
 
     if (from && to) {
-      // Ensure from date is before to date
       const start = isBefore(from, to) ? from : to;
       const end = isAfter(to, from) ? to : from;
-      
-      // Check for consecutive days (including exactly 4 days)
       const diff = differenceInCalendarDays(end, start);
       
-      // Allow range if it's exactly 4 days or less
       if (diff <= 3) {
-        // For ranges less than 4 days, extend to make it exactly 4 days
         const finalEnd = diff < 3 ? addDays(start, 3) : end;
         
-        // Small delay for smoother transition
         setTimeout(() => {
+          // Clear caches BEFORE setting the new range
+          clearDailyDetailsCache(); 
+          clearWeeklyInsightsCache();
           setSelectedDateRange({ 
             start: start, 
             end: finalEnd 
@@ -89,19 +88,20 @@ export default function Navigation({ onGenerateForecast }: NavigationProps) {
         }, 150);
       }
     }
-  }, [setSelectedDateRange]);
+  }, [setSelectedDateRange, clearDailyDetailsCache, clearWeeklyInsightsCache]);
 
   const handleReset = useCallback(() => {
-    resetState();
+    // Clear caches as part of the reset
+    clearDailyDetailsCache(); 
+    clearWeeklyInsightsCache();
+    resetState(); // resetState also clears the caches now, but explicit call is fine
     setTempRange({ from: null, to: null });
-    setCalendarKey(prev => prev + 1); // Force calendar re-render
+    setCalendarKey(prev => prev + 1); 
     
-    // Set a new date range with today and previous 3 days
     const today = new Date();
     const start = new Date(today);
     start.setDate(today.getDate() - 3);
     
-    // Wait a moment before updating to allow components to reset
     setTimeout(() => {
       setSelectedDateRange({ 
         start: start, 
@@ -109,9 +109,8 @@ export default function Navigation({ onGenerateForecast }: NavigationProps) {
       });
     }, 100);
     
-    // Small delay before closing popover for smoother transition
     setTimeout(() => setIsOpen(false), 150);
-  }, [resetState, setSelectedDateRange]);
+  }, [resetState, setSelectedDateRange, clearDailyDetailsCache, clearWeeklyInsightsCache]);
     
   // Format the range for display
   const formatRange = useCallback(() => {
@@ -138,7 +137,7 @@ export default function Navigation({ onGenerateForecast }: NavigationProps) {
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-base font-semibold">Date Range Selection</h3>
         <div className="flex gap-2">
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             onClick={handleReset}
@@ -147,7 +146,7 @@ export default function Navigation({ onGenerateForecast }: NavigationProps) {
           >
             <RefreshCcw className="mr-1 h-3 w-3" />
             Reset
-          </Button>
+          </Button> */}
           <Button
             onClick={onGenerateForecast}
             disabled={
@@ -244,21 +243,6 @@ export default function Navigation({ onGenerateForecast }: NavigationProps) {
                 <span className="text-xs font-medium">
                   {format(forecastDates.forecastStart, 'MMM d, yyyy')} - {format(forecastDates.forecastEnd, 'MMM d, yyyy')}
                 </span>
-              </div>
-            )}
-            
-            {forecastGenerated && (
-              <div className="flex justify-end mt-1">
-                <Button
-                  onClick={onGenerateForecast}
-                  variant="ghost" 
-                  size="sm"
-                  className="text-xs h-6 py-0 px-2 text-zinc-500"
-                  disabled={isGeneratingForecast}
-                >
-                  <RefreshCcw className="mr-1 h-3 w-3" />
-                  Regenerate
-                </Button>
               </div>
             )}
           </div>

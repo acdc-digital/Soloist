@@ -81,6 +81,15 @@ const schema = defineSchema({
   })
   .index("byUserDate", ["userId", "forecastDate"]),
 
+  // New table to store user instructions for random log generation
+  randomizer: defineTable({
+    userId: v.string(),
+    instructions: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("byUserId", ["userId"]),
+
   // other tables...
 });
 

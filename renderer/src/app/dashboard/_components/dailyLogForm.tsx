@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Zap } from "lucide-react";
 import { useFeedStore } from "@/store/feedStore";
 import { addDays, format, subDays } from "date-fns";
 import { useConvex } from "convex/react";
@@ -59,13 +59,14 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   // Fetch existing log for the day
   const existingLog = useQuery(
     api.dailyLogs.getDailyLog,
-    userId ? { date: effectiveDate, userId } : undefined
+    userId ? { date: effectiveDate, userId } : "skip"
   );
 
   const dailyLogMutation = useMutation(api.dailyLogs.dailyLog);
   const scoreDailyLog    = useAction(api.score.scoreDailyLog);
   const generateFeed     = useAction(api.feed.generateFeedForDailyLog);
   const generateForecast = useAction(api.forecast.generateForecast);
+  const generateRandomLog = useAction(api.randomizer.generateRandomLog);
   const convex = useConvex();
 
   const {
@@ -111,6 +112,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   /* Local state                               */
   /* ────────────────────────────────────────── */
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (userLoading || !userId) {
@@ -167,15 +169,84 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
   };
 
   /* ────────────────────────────────────────── */
+  /* Random generation handler                 */
+  /* ────────────────────────────────────────── */
+  const handleGenerateRandom = async () => {
+    setError(null);
+    setIsGenerating(true);
+    try {
+      if (!generateRandomLog) {
+        throw new Error("Random generation feature is not available.");
+      }
+      const generatedData = await generateRandomLog({ 
+        date: effectiveDate,
+        userId
+      });
+
+      if (generatedData && typeof generatedData === 'object') {
+        const validatedData: Partial<DailyLogFormData> = {};
+        validatedData.overallMood = typeof generatedData.overallMood === 'number' ? Math.max(1, Math.min(10, Math.round(generatedData.overallMood))) : 5;
+        validatedData.workSatisfaction = typeof generatedData.workSatisfaction === 'number' ? Math.max(1, Math.min(10, Math.round(generatedData.workSatisfaction))) : 5;
+        validatedData.personalLifeSatisfaction = typeof generatedData.personalLifeSatisfaction === 'number' ? Math.max(1, Math.min(10, Math.round(generatedData.personalLifeSatisfaction))) : 5;
+        validatedData.balanceRating = typeof generatedData.balanceRating === 'number' ? Math.max(1, Math.min(10, Math.round(generatedData.balanceRating))) : 5;
+        // Ensure sleep is rounded to nearest 0.5
+        validatedData.sleep = typeof generatedData.sleep === 'number' ? Math.max(0, Math.min(24, Math.round(generatedData.sleep * 2) / 2)) : 7;
+        validatedData.exercise = typeof generatedData.exercise === 'boolean' ? generatedData.exercise : false;
+        validatedData.highlights = typeof generatedData.highlights === 'string' ? generatedData.highlights : "";
+        validatedData.challenges = typeof generatedData.challenges === 'string' ? generatedData.challenges : "";
+        validatedData.tomorrowGoal = typeof generatedData.tomorrowGoal === 'string' ? generatedData.tomorrowGoal : "";
+
+        // Reset the form with the generated data
+        reset(validatedData);
+        
+        // AUTO-SUBMIT: After generating and filling the form, submit it automatically
+        // This triggers the same flow as clicking "Save Log" button (coloring the heatmap, generating feed, etc.)
+        console.log("Auto-submitting the generated log data");
+        await onSubmit(validatedData as DailyLogFormData);
+      } else {
+        throw new Error("Generated data is not in the expected format or is null.");
+      }
+    } catch (err) {
+      console.error("Failed to generate random log:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate random log content.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  /* ────────────────────────────────────────── */
   /* UI                                        */
   /* ────────────────────────────────────────── */
   return (
     <div className="flex flex-col h-full bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 overflow-x-hidden">
+      {/* Fixed Top Section with Generate Random Button */}
+      <div className="px-3 py-3 border-b border-zinc-200 dark:border-zinc-800">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleGenerateRandom}
+          disabled={isSubmitting || isGenerating}
+          className="w-full text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 dark:focus:ring-offset-zinc-900 flex items-center justify-center"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Zap className="mr-2 h-4 w-4" />
+              Generator
+            </>
+          )}
+        </Button>
+      </div>
+
       <ScrollArea className="flex-1 overflow-x-hidden px-3 py-2">
         <form
           id="daily-log-form"
           onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4 w-full max-w-full"
+          className="space-y-4 w-full max-w-full pt-2"
         >
           {/* Ratings Section */}
           <div className="space-y-3">
@@ -203,6 +274,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
                   min="1"
                   max="10"
                   step="1"
+                  className="accent-sky-600"
                   {...register(field as any, {
                     required: true,
                     valueAsNumber: true,
@@ -282,7 +354,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
       </ScrollArea>
 
       {/* Footer */}
-      <div className="sticky bottom-0 w-full dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2">
+      <div className="sticky bottom-0 w-full border-t border-zinc-100 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2 pb-6 pt-6">
         {error && (
           <div className="flex items-center space-x-2 mb-2 text-red-600">
             <AlertCircle size={16} />
@@ -293,7 +365,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
           <Button
             type="submit"
             form="daily-log-form"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGenerating}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
           >
             {isSubmitting ? (
@@ -311,6 +383,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
             type="button"
             variant="outline"
             onClick={onClose}
+            disabled={isSubmitting || isGenerating}
             className="border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm"
           >
             Cancel

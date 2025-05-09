@@ -21,6 +21,7 @@ import type * as feedback from "../feedback.js";
 import type * as forecast from "../forecast.js";
 import type * as generator from "../generator.js";
 import type * as http from "../http.js";
+import type * as randomizer from "../randomizer.js";
 import type * as score from "../score.js";
 import type * as templates from "../templates.js";
 import type * as testing from "../testing.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   forecast: typeof forecast;
   generator: typeof generator;
   http: typeof http;
+  randomizer: typeof randomizer;
   score: typeof score;
   templates: typeof templates;
   testing: typeof testing;

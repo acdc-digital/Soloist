@@ -201,13 +201,13 @@ export function Sidebar({ className }: SidebarProps) {
         )}
       >
         {/* TOP SECTION */}
-        <div className="relative p-2">
+        <div className="relative">
           {/* Toggle Sidebar */}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleCollapsed}
-            className="rounded-md hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60"
+            className="rounded-md hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 m-2"
           >
             {collapsed ? (
               <ArrowRightToLine className="h-4 w-4" />
@@ -217,13 +217,13 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
           {/* Everything below is hidden if collapsed */}
           {!collapsed && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-1 space-y-3">
               {/* SEARCH */}
               <div>
-                <p className="px-1 mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                <p className="px-1 pl-3 pr-2 p-2 mb-0 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Search
                 </p>
-                <div className="relative">
+                <div className="relative pl-2 pr-4">
                   <Search
                     size={15}
                     className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
@@ -236,10 +236,10 @@ export function Sidebar({ className }: SidebarProps) {
                   />
                 </div>
               </div>
-              <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40 -mx-2" />
+              <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40" />
               {/* ACTIONS */}
               <div>
-                <p className="px-2 mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                <p className="px-2 pl-3 p-2 mb-0 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Actions
                 </p>
                 {mainActions.map((item) => (
@@ -248,7 +248,7 @@ export function Sidebar({ className }: SidebarProps) {
                     variant="ghost"
                     onClick={item.action}
                     className={cn(
-                      "w-full h-9 justify-start px-3 text-sm font-normal hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 rounded-lg mb-1",
+                      "w-[90%] h-9 justify-start px-3 text-sm font-normal hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 rounded-lg ml-2 mb-1",
                       item.active && "bg-zinc-200/80 dark:bg-zinc-800/80"
                     )}
                   >
@@ -261,12 +261,12 @@ export function Sidebar({ className }: SidebarProps) {
           )}
         </div>
         {/* BOTTOM SECTION */}
-        <div className="relative p-2">
+        <div className="relative">
           {/* ACCOUNT ACCORDION */}
           {!collapsed && (
             <>
-              <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40 -mx-2 mt-3" />
-              <div className="mt-3 mb-2 relative">
+              <Separator className="bg-zinc-300/40 dark:bg-zinc-700/40 mt-3" />
+              <div className="mt-3 mb-2 pb-2 relative">
                 <p className="px-2 mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Account
                 </p>
@@ -275,7 +275,7 @@ export function Sidebar({ className }: SidebarProps) {
                 <Button
                   variant="ghost"
                   onClick={() => setAccountMenuOpen(!accountMenuOpen)}
-                  className="w-full py-1.5 px-2 flex items-center justify-between text-left rounded-lg hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
+                  className="w-[90%] ml-3 py-1.5 px-2 flex items-center justify-between text-left rounded-lg hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
                 >
                   <div className="flex items-center">
                     <Avatar className="h-7 w-7 flex-shrink-0 ring-1 ring-offset-1 ring-offset-zinc-50/60 dark:ring-offset-zinc-950/60 ring-zinc-300/50 dark:ring-zinc-700/50">

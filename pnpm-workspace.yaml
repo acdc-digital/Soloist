@@ -2,6 +2,7 @@ packages:
   - electron
   - renderer
   - convex
+  - webiste
 ignoredBuiltDependencies:
   - electron
   - esbuild

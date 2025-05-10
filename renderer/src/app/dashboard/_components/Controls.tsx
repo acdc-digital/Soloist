@@ -85,7 +85,7 @@ export default function Controls({
   };
 
   return (
-    <div className="flex items-center gap-3 justify-between flex-wrap sm:flex-nowrap">
+    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap w-full">
 
       {/* ----- Left Side: Year Navigation ----- */}
       <div className="flex items-center gap-2">
@@ -99,7 +99,6 @@ export default function Controls({
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {/* Use your custom YearSelector component */}
         <YearSelector
           selectedYear={selectedYear}
           onYearChange={onYearChange}
@@ -119,87 +118,81 @@ export default function Controls({
         </Button>
       </div>
 
-      {/* ----- Right Side: Filter, Export, and Tabs ----- */}
-      <div className="flex items-center gap-2">
-        {/* Legend Filter Popover */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 flex items-center gap-1.5">
-              <FilterIcon className="h-3.5 w-3.5 text-zinc-500" />
-              <span className="hidden sm:inline">
-                {selectedLegend ? `Filter: ${selectedLegend}` : "Filter"}
-              </span>
-              {selectedLegend && (
-                <Badge
-                  variant="secondary"
-                  className="ml-1 h-5 px-1 rounded-sm cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onLegendFilterChange(null);
-                  }}
-                >
-                  ✕
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-60 p-2">
-            <div className="space-y-1.5 py-1">
-              <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2 px-1">
-                Filter by score range:
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {legendItems.map((item) => (
-                  <div
-                    key={item.label}
-                    className={`flex items-center gap-1.5 text-xs rounded-sm px-2 py-1.5 cursor-pointer transition-colors ${
-                      selectedLegend === item.label
-                        ? "bg-zinc-100 dark:bg-zinc-800 font-medium"
-                        : "hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50"
-                    }`}
-                    onClick={() =>
-                      onLegendFilterChange(
-                        selectedLegend === item.label ? null : item.label
-                      )
-                    }
-                  >
-                    <div className={`w-3 h-3 rounded-sm flex-shrink-0 ${item.color}`} />
-                    <span className="text-zinc-700 dark:text-zinc-300">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-              {selectedLegend && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full mt-2 h-7 text-xs"
-                  onClick={() => onLegendFilterChange(null)}
-                >
-                  Clear Filter
-                </Button>
-              )}
+      {/* ----- Middle: Filter Control ----- */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 flex items-center gap-1.5">
+            <FilterIcon className="h-3.5 w-3.5 text-zinc-500" />
+            <span className="hidden sm:inline">
+              {selectedLegend ? `Filter: ${selectedLegend}` : "Filter"}
+            </span>
+            {selectedLegend && (
+              <Badge
+                variant="secondary"
+                className="ml-1 h-5 px-1 rounded-sm cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLegendFilterChange(null);
+                }}
+              >
+                ✕
+              </Badge>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-60 p-2">
+          <div className="space-y-1.5 py-1">
+            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2 px-1">
+              Filter by score range:
             </div>
-          </PopoverContent>
-        </Popover>
+            <div className="grid grid-cols-2 gap-1.5">
+              {legendItems.map((item) => (
+                <div
+                  key={item.label}
+                  className={`flex items-center gap-1.5 text-xs rounded-sm px-2 py-1.5 cursor-pointer transition-colors ${
+                    selectedLegend === item.label
+                      ? "bg-zinc-100 dark:bg-zinc-800 font-medium"
+                      : "hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50"
+                  }`}
+                  onClick={() =>
+                    onLegendFilterChange(
+                      selectedLegend === item.label ? null : item.label
+                    )
+                  }
+                >
+                  <div className={`w-3 h-3 rounded-sm flex-shrink-0 ${item.color}`} />
+                  <span className="text-zinc-700 dark:text-zinc-300">{item.label}</span>
+                </div>
+              ))}
+            </div>
+            {selectedLegend && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-2 h-7 text-xs"
+                onClick={() => onLegendFilterChange(null)}
+              >
+                Clear Filter
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
 
-        {/* Tabs for Right Sidebar View */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-[150px]">
-          <TabsList className="grid w-full grid-cols-2 h-8">
-            <TabsTrigger value="log" className="text-xs h-7">
-              Log
-            </TabsTrigger>
-            <TabsTrigger value="feed" className="text-xs h-7">
-              Feed
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      {/* Spacer div to push the Tabs to the right */}
+      <div className="flex-grow"></div>
 
-        {/* Export Button */}
-        <Button variant="outline" size="icon" className="h-8 w-8">
-          <Download className="h-4 w-4" />
-          <span className="sr-only">Export Data</span>
-        </Button>
-      </div>
+      {/* ----- Rightmost: Tabs for Right Sidebar View ----- */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-[150px] flex-shrink-0">
+        <TabsList className="grid w-full grid-cols-2 h-8">
+          <TabsTrigger value="log" className="text-xs h-7">
+            Log
+          </TabsTrigger>
+          <TabsTrigger value="feed" className="text-xs h-7">
+            Feed
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     </div>
   );
 }

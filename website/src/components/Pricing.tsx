@@ -184,30 +184,45 @@ export default function Pricing() {
     const priceId = activeTab === 'monthly' 
       ? STRIPE_CONFIG.prices.pro.month 
       : STRIPE_CONFIG.prices.pro.year;
-      
+    
     if (priceId.includes('YOUR_') || STRIPE_CONFIG.publishableKey.includes('YOUR_')) {
       alert("This is a demo button. To enable payments, replace the placeholder Stripe credentials with your own.");
+      return;
+    }
+    
+    // Check if we're in the website context (not in Electron)
+    const isWebsiteContext = typeof window !== 'undefined' &&
+      (window.location.hostname !== 'localhost' ||
+       window.location.port === '3001');
+    
+    // If we're in Electron or not in the website context, show a message
+    if (!isWebsiteContext) {
+      alert("Payments are available on our website. Please visit our website to subscribe.");
       return;
     }
     
     setIsLoading(true);
     
     try {
-      // Use the StripeCheckout utility to redirect to checkout
-      await StripeCheckout.redirectToCheckout({
+      // Use the StripeCheckout modal instead of redirect
+      await StripeCheckout.openModalCheckout({
         priceId,
-        successUrl: `${window.location.origin}/thank-you`,
-        cancelUrl: window.location.href,
-        // If you have user information, you can add it here
-        // email: userEmail,
         customerData: {
           plan: activeTab === 'monthly' ? 'monthly' : 'yearly'
+        },
+        onSuccess: (sessionId) => {
+          console.log('Payment successful!', sessionId);
+          // Optionally redirect to thank you page or show a success message
+          window.location.href = `/thank-you?session_id=${sessionId}`;
+        },
+        onCancel: () => {
+          console.log('Payment cancelled');
+          setIsLoading(false);
         }
       });
     } catch (error) {
       console.error('Error opening checkout:', error);
       alert("There was an error opening the checkout. Please try again later.");
-    } finally {
       setIsLoading(false);
     }
   };

@@ -76,14 +76,14 @@ export function CommentSection({ onAddComment }: CommentSectionProps) {
 
   return (
     <form
-      className="relative flex items-center p-0 pt-2"
+      className="relative flex items-center p-0 pt-0"
       onSubmit={handleSubmitComment}
     >
       <Textarea
         placeholder="Add a comment..."
         value={newComment}
         onChange={(e) => setNewComment(e.target.value)}
-        className="min-h-[36px] resize-none text-sm pr-12"
+        className="min-h-[42px] resize-none text-sm pr-12"
         onKeyDown={e => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

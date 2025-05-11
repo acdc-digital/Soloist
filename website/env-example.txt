@@ -1,0 +1,20 @@
+# Stripe Payment Integration
+# Copy this file to .env.local and replace the placeholders with your actual values
+
+# Your Stripe secret key (server-side)
+STRIPE_SECRET_KEY=sk_test_YOUR_SECRET_KEY_HERE
+
+# Your Stripe publishable key (client-side)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
+
+# Your Stripe webhook secret
+STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
+
+# Price ID for your monthly subscription plan
+NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID=price_YOUR_MONTHLY_PRICE_ID_HERE
+
+# Price ID for your yearly subscription plan
+NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID=price_YOUR_YEARLY_PRICE_ID_HERE
+
+# Your application URL
+NEXT_PUBLIC_APP_URL=http://localhost:3001 

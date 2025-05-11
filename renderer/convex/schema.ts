@@ -51,6 +51,19 @@ const schema = defineSchema({
     }))),
   }),
 
+  // New table for tags
+  feedTags: defineTable({
+    userId: v.string(),
+    feedId: v.id("feed"),
+    tagId: v.string(),
+    tagName: v.string(),
+    tagColor: v.string(),
+    createdAt: v.number(),
+  })
+  .index("byFeedId", ["feedId"])
+  .index("byUserId", ["userId"])
+  .index("byUserIdAndTagId", ["userId", "tagId"]),
+
   forecast: defineTable({
     userId: v.string(),
     date: v.string(),

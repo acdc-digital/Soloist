@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { CommentSection } from "./CommentSection";
 import FeedFooter from "./FeedFooter";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TagSelector, TagBadge, Tag, TagColors } from "./Tags";
 
 // Define Comment type locally to reduce dependencies
 type Comment = {
@@ -37,7 +38,12 @@ type Comment = {
   createdAt: Date;
 };
 
-export default function Feed() {
+interface FeedProps {
+  /** Callback when tags are updated (added/removed) */
+  onTagsUpdate?: (tags: Tag[]) => void;
+}
+
+export default function Feed({ onTagsUpdate }: FeedProps) {
   console.log("Feed component mounting/rendering");
   
   const {
@@ -63,9 +69,17 @@ export default function Feed() {
   const [feedId, setFeedId] = useState<string | null>(null);
   const [localComments, setLocalComments] = useState<Comment[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
+  
+  // New: Tag state
+  const [feedTags, setFeedTags] = useState<Record<string, Tag[]>>({});
+  const [allTags, setAllTags] = useState<Tag[]>([]);
 
   // Direct mutation to add a comment to a feed document
   const updateFeedWithComment = useMutation(api.feed.addComment);
+  
+  // New: Add tag mutation
+  const addTagToFeed = useMutation(api.feed.addTag);
+  const removeTagFromFeed = useMutation(api.feed.removeTag);
 
   // New: feedback mutation
   const submitFeedback = useMutation(api.feedback.submitFeedback);
@@ -169,7 +183,11 @@ export default function Feed() {
   /* ───────────────────────────────────────────── */
   const filteredMessages =
     selectedDate && feedMessages
-      ? feedMessages.filter((m) => m.date === selectedDate)
+      ? feedMessages.filter((m) => {
+          // Debug: log both values to compare
+          console.log('Feed filter compare:', {messageDate: m.date, selectedDate});
+          return m.date === selectedDate;
+        })
       : [];
       
   console.log("Filtered messages:", {
@@ -320,6 +338,127 @@ export default function Feed() {
   };
 
   /* ───────────────────────────────────────────── */
+  /* New: Tag handling functions                   */
+  /* ───────────────────────────────────────────── */
+  const handleAddTag = async (messageId: string, tag: Tag) => {
+    if (!userId) return;
+    
+    // Optimistic update
+    setFeedTags(prev => ({
+      ...prev,
+      [messageId]: [...(prev[messageId] || []), tag]
+    }));
+    
+    // Update all tags collection for reuse
+    if (!allTags.some(t => t.id === tag.id)) {
+      setAllTags(prev => [...prev, tag]);
+    }
+    
+    try {
+      // Call the backend mutation
+      await addTagToFeed({
+        feedId: messageId as Id<"feed">,
+        userId,
+        tagId: tag.id,
+        tagName: tag.name,
+        tagColor: tag.color
+      });
+      
+      // Notify parent of tag updates
+      if (onTagsUpdate) {
+        onTagsUpdate([...allTags, tag].filter((value, index, self) => 
+          index === self.findIndex(t => t.id === value.id)
+        ));
+      }
+    } catch (err) {
+      console.error("Error adding tag:", err);
+      // Revert on error
+      setFeedTags(prev => ({
+        ...prev,
+        [messageId]: (prev[messageId] || []).filter(t => t.id !== tag.id)
+      }));
+    }
+  };
+  
+  const handleRemoveTag = async (messageId: string, tagId: string) => {
+    if (!userId) return;
+    
+    // Find the tag being removed for possible rollback
+    const tagBeingRemoved = allTags.find(t => t.id === tagId);
+    
+    // Optimistic update
+    setFeedTags(prev => ({
+      ...prev,
+      [messageId]: (prev[messageId] || []).filter(t => t.id !== tagId)
+    }));
+    
+    try {
+      // Call the backend mutation
+      await removeTagFromFeed({
+        feedId: messageId as Id<"feed">,
+        userId,
+        tagId
+      });
+      
+      // We don't remove the tag from allTags since it might be used elsewhere
+      // But we can notify parent of the current tag list
+      if (onTagsUpdate) {
+        onTagsUpdate(allTags);
+      }
+    } catch (err) {
+      console.error("Error removing tag:", err);
+      // Restore on error
+      if (tagBeingRemoved) {
+        setFeedTags(prev => ({
+          ...prev,
+          [messageId]: [...(prev[messageId] || []), tagBeingRemoved]
+        }));
+      }
+    }
+  };
+
+  // New: Query to get tags for feed messages
+  const feedTagsQuery = useQuery(
+    api.feed.getFeedTags,
+    userId ? { userId } : "skip"
+  );
+  
+  // Add a ref to hold the latest onTagsUpdate
+  const onTagsUpdateRef = useRef(onTagsUpdate);
+  useEffect(() => {
+    onTagsUpdateRef.current = onTagsUpdate;
+  }, [onTagsUpdate]);
+
+  // Load tags when data changes
+  useEffect(() => {
+    if (feedTagsQuery) {
+      const tagsByFeedId: Record<string, Tag[]> = {};
+      const allTagsList: Tag[] = [];
+      feedTagsQuery.forEach(item => {
+        const feedId = item.feedId;
+        if (!tagsByFeedId[feedId]) {
+          tagsByFeedId[feedId] = [];
+        }
+        const tag: Tag = {
+          id: item.tagId,
+          name: item.tagName,
+          color: item.tagColor as TagColors,
+        };
+        tagsByFeedId[feedId].push(tag);
+        if (!allTagsList.some(t => t.id === tag.id)) {
+          allTagsList.push(tag);
+        }
+      });
+      setFeedTags(tagsByFeedId);
+      setAllTags(allTagsList);
+      // Use the ref to call the latest onTagsUpdate
+      if (onTagsUpdateRef.current) {
+        onTagsUpdateRef.current(allTagsList);
+      }
+    }
+  }, [feedTagsQuery]);
+
+  /* ───────────────────────────────────────────── */
   /* 7 Loading gate                                */
   /* ───────────────────────────────────────────── */
   if (userLoading || !userId) {
@@ -374,37 +513,55 @@ export default function Feed() {
                     <p>{msg.message}</p>
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-between text-xs text-muted-foreground pt-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs mr-2">Was this helpful?</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleFeedback(msg._id, true)}
-                      className={cn(
-                        "h-7 w-7 rounded-full",
-                        feedbackStatus[msg._id] === "liked" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      )}
-                    >
-                      <ThumbsUp className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleFeedback(msg._id, false)}
-                      className={cn(
-                        "h-7 w-7 rounded-full",
-                        feedbackStatus[msg._id] === "disliked" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      )}
-                    >
-                      <ThumbsDown className="h-3 w-3" />
-                    </Button>
+                <CardFooter className="flex flex-col text-xs text-muted-foreground pt-0">
+                  <div className="flex justify-between w-full items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs mr-2">Was this helpful?</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleFeedback(msg._id, true)}
+                        className={cn(
+                          "h-7 w-7 rounded-full",
+                          feedbackStatus[msg._id] === "liked" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        )}
+                      >
+                        <ThumbsUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleFeedback(msg._id, false)}
+                        className={cn(
+                          "h-7 w-7 rounded-full",
+                          feedbackStatus[msg._id] === "disliked" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        )}
+                      >
+                        <ThumbsDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center">
+                      <Info className="h-3 w-3 mr-1" />
+                      {formatDistanceToNow(new Date(msg.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <Info className="h-3 w-3 mr-1" />
-                    {formatDistanceToNow(new Date(msg.createdAt), {
-                      addSuffix: true,
-                    })}
+                  
+                  {/* Tags row */}
+                  <div className="flex flex-wrap gap-2 mt-3 items-center">
+                    {feedTags[msg._id]?.map((tag) => (
+                      <TagBadge 
+                        key={tag.id} 
+                        tag={tag} 
+                        onRemove={(tagId) => handleRemoveTag(msg._id, tagId)} 
+                      />
+                    ))}
+                    
+                    <TagSelector 
+                      onTagSelected={(tag) => handleAddTag(msg._id, tag)} 
+                      existingTags={allTags}
+                    />
                   </div>
                 </CardFooter>
               </Card>
@@ -517,7 +674,10 @@ export default function Feed() {
           )}
         </div>
       </div>
-      <FeedFooter onAddComment={handleAddComment} />
+      <FeedFooter 
+        onAddComment={handleAddComment} 
+        hasFeed={feedMessages !== null && hasLogForDate}
+      />
     </div>
   );
 }

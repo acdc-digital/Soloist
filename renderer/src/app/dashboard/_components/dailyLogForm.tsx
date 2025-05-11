@@ -366,7 +366,7 @@ export default function DailyLogForm({ onClose, date }: DailyLogFormProps) {
             type="submit"
             form="daily-log-form"
             disabled={isSubmitting || isGenerating}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm ml-2"
           >
             {isSubmitting ? (
               <>

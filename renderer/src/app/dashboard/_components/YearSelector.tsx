@@ -27,7 +27,6 @@ export function YearSelector({
   maxYear = new Date().getFullYear() + 10, // default is about 10 years from now
   className,
 }: YearSelectorProps) {
-  // Build an array of years from minYear to maxYear
   const years: string[] = React.useMemo(() => {
     const arr = [];
     for (let y = minYear; y <= maxYear; y++) {
@@ -35,6 +34,11 @@ export function YearSelector({
     }
     return arr;
   }, [minYear, maxYear]);
+
+  // Only use selectedYear if it exists in our years array
+  if (!years.includes(selectedYear)) {
+    return null;
+  }
 
   return (
     <Select value={selectedYear} onValueChange={onYearChange}>

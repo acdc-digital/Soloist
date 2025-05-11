@@ -1,12 +1,15 @@
 {
-  "name": "electron-nextjs",
+  "name": "Soloist",
   "version": "1.0.0",
-  "description": "Next-Electron-MonoRepo",
+  "description": "Soloist-MonoRepo",
   "main": "index.ts",
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"pnpm --filter electron dev\" \"pnpm --filter renderer dev\" \"pnpm --filter webiste dev\""
+    "dev": "concurrently \"pnpm --filter electron dev\" \"pnpm --filter renderer dev\" \"pnpm --filter website dev\"",
+    "dev:local": "concurrently \"pnpm --filter electron dev\" \"pnpm --filter renderer dev\" \"pnpm --filter website dev:local\"",
+    "dev:stripe": "concurrently \"pnpm --filter electron dev\" \"pnpm --filter renderer dev\" \"pnpm --filter website dev\" \"pnpm --filter website ngrok\"",
+    "restart": "pkill -f \"next dev\" || true && pnpm dev"
   },
   "devDependencies": {
     "concurrently": "^7.6.0"

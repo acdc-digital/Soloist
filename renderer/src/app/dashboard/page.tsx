@@ -28,6 +28,7 @@ import TestingPage from "./testing/page";
 import { Loader2, ArrowRightToLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import HelpPage from "../help/page";
+import { Tag } from "./_components/Tags";
 
 // Responsive breakpoint for auto-collapse in pixels
 const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1256;
@@ -56,6 +57,10 @@ export default function Dashboard() {
     activeTab,
     currentView
   });
+
+  // Tag filtering state (new)
+  const [availableTags, setAvailableTags] = React.useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = React.useState<Tag[]>([]);
 
   /* ───────────────────────────────────────────── */
   /*  Sync user from Convex → Zustand store        */
@@ -141,6 +146,21 @@ export default function Dashboard() {
   /*  Heatmap year selector                        */
   /* ───────────────────────────────────────────── */
   const [selectedYear, setSelectedYear] = React.useState("2025");
+  // Ensure selectedYear is always valid for the year range
+  const minYear = 1970;
+  const maxYear = new Date().getFullYear() + 10;
+  const years: string[] = React.useMemo(() => {
+    const arr: string[] = [];
+    for (let y = minYear; y <= maxYear; y++) {
+      arr.push(String(y));
+    }
+    return arr;
+  }, [minYear, maxYear]);
+  React.useEffect(() => {
+    if (!years.includes(selectedYear)) {
+      setSelectedYear(years[0]);
+    }
+  }, [selectedYear, years]);
   const [selectedLegend, setSelectedLegend] = React.useState<string | null>(null);
   const userId = getUserId(user);
 
@@ -150,6 +170,36 @@ export default function Dashboard() {
     { userId, year: selectedYear },
     { enabled: currentView === "dashboard" && !!userId }
   );
+
+  /* Fetch all user tags for filtering */
+  const userTags = useQuery(
+    api.feed.getFeedTags,
+    userId ? { userId } : "skip",
+    { enabled: currentView === "dashboard" && !!userId }
+  );
+
+  // Process tags from the backend
+  useEffect(() => {
+    if (userTags) {
+      const processedTags: Tag[] = [];
+      const tagMap = new Map<string, Tag>();
+      
+      userTags.forEach(item => {
+        // Only add each unique tag once
+        if (!tagMap.has(item.tagId)) {
+          const tag: Tag = {
+            id: item.tagId,
+            name: item.tagName,
+            color: item.tagColor as any,
+          };
+          tagMap.set(item.tagId, tag);
+          processedTags.push(tag);
+        }
+      });
+      
+      setAvailableTags(processedTags);
+    }
+  }, [userTags]);
 
   if (currentView === "dashboard" && !dailyLogs) {
     return (
@@ -184,6 +234,10 @@ export default function Dashboard() {
 
   function handleLegendFilterChange(legend: string | null) {
     setSelectedLegend(legend);
+  }
+  
+  function handleTagFilterChange(tags: Tag[]) {
+    setSelectedTags(tags);
   }
 
   /* ───────────────────────────────────────────── */
@@ -245,6 +299,9 @@ export default function Dashboard() {
                   onYearChange={handleYearChange}
                   selectedLegend={selectedLegend}
                   onLegendFilterChange={handleLegendFilterChange}
+                  availableTags={availableTags}
+                  selectedTags={selectedTags}
+                  onTagFilterChange={handleTagFilterChange}
                 />
               </div>
             </div>
@@ -254,6 +311,7 @@ export default function Dashboard() {
               <Heatmap
                 year={parseInt(selectedYear)}
                 onSelectDate={handleSelectDate}
+                selectedTags={selectedTags}
               />
             </div>
           </main>
@@ -290,7 +348,7 @@ export default function Dashboard() {
             ) : activeTab === "feed" ? (
               <div>
                 {console.log("Rendering Feed component", { activeTab, selectedDate })}
-                <Feed />
+                <Feed onTagsUpdate={(newTags) => setAvailableTags(newTags)} />
               </div>
             ) : (
               <div className="p-4 text-sm text-zinc-500">No content.</div>

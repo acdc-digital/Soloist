@@ -254,3 +254,107 @@ export const getComments = query({
     return feed.comments;
   },
 });
+
+/**
+ * Add a tag to a feed item
+ */
+export const addTag = mutation({
+  args: {
+    feedId: v.id("feed"),
+    userId: v.string(),
+    tagId: v.string(),
+    tagName: v.string(),
+    tagColor: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { feedId, userId, tagId, tagName, tagColor } = args;
+    
+    // Verify the feed exists and belongs to this user
+    const feed = await ctx.db.get(feedId);
+    if (!feed) {
+      throw new Error("Feed not found");
+    }
+    
+    if (feed.userId !== userId) {
+      throw new Error("Cannot add tag to another user's feed");
+    }
+    
+    // Check if this tag already exists for this feed
+    const existingTag = await ctx.db
+      .query("feedTags")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("feedId"), feedId),
+          q.eq(q.field("tagId"), tagId)
+        )
+      )
+      .first();
+    
+    // If the tag already exists, don't create a duplicate
+    if (existingTag) {
+      return existingTag._id;
+    }
+    
+    // Create a new tag
+    return await ctx.db.insert("feedTags", {
+      userId,
+      feedId,
+      tagId,
+      tagName,
+      tagColor,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Remove a tag from a feed item
+ */
+export const removeTag = mutation({
+  args: {
+    feedId: v.id("feed"),
+    userId: v.string(),
+    tagId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { feedId, userId, tagId } = args;
+    
+    // Find the tag
+    const tag = await ctx.db
+      .query("feedTags")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("feedId"), feedId),
+          q.eq(q.field("tagId"), tagId),
+          q.eq(q.field("userId"), userId)
+        )
+      )
+      .first();
+    
+    if (!tag) {
+      throw new Error("Tag not found");
+    }
+    
+    // Delete the tag
+    await ctx.db.delete(tag._id);
+    
+    return true;
+  },
+});
+
+/**
+ * Get all tags for a user's feed items
+ */
+export const getFeedTags = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+    
+    return await ctx.db
+      .query("feedTags")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .collect();
+  },
+});

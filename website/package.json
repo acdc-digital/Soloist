@@ -1,12 +1,15 @@
 {
-  "name": "webiste",
+  "name": "website",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3001",
+    "dev": "next dev -p 3001",
+    "dev:https": "next dev --experimental-https -p 3001",
+    "dev:local": "next dev --hostname dev.soloist.local -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ngrok": "ngrok http 3001 --log=stdout"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.10",
@@ -14,9 +17,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.509.0",
-    "next": "15.3.2",
+    "next": "^15.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "stripe": "^14.25.0",
     "tailwind-merge": "^3.2.0"
   },
   "devDependencies": {
@@ -28,6 +32,7 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
+    "mini-css-extract-plugin": "^2.9.2",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.6",
     "tw-animate-css": "^1.2.9",

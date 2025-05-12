@@ -49,7 +49,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
   customButton
 }) => {
   return (
-    <div className={`border rounded-xl overflow-hidden h-full relative ${isPopular ? 'border-emerald-600 border-2' : 'border-gray-300 border-2'}`}>
+    <div className={`border rounded-xl overflow-hidden h-full relative ${isPopular ? 'border-emerald-600 border-2' : 'border-gray-300 dark:border-zinc-700 border-2'} dark:bg-zinc-900`}>
       {isPopular && (
         <div className="absolute top-0 left-0 right-0 mx-auto w-fit px-4 py-1 bg-emerald-600 text-white text-sm font-medium rounded-b-lg">
           Most Popular
@@ -58,14 +58,14 @@ const PricingCard: React.FC<PricingCardProps> = ({
       
       <div className="p-8 flex flex-col h-full">
         <div className="mb-8">
-          <h3 className="text-3xl font-bold mb-2">{title}</h3>
-          <p className="text-gray-600">{description}</p>
+          <h3 className="text-3xl font-bold mb-2 dark:text-white">{title}</h3>
+          <p className="text-gray-600 dark:text-gray-300">{description}</p>
         </div>
         
         <div className="mb-8">
           <div className="flex items-baseline">
-            <span className="text-6xl font-bold">{price}</span>
-            <span className="ml-2 text-xl text-gray-600">/{period}</span>
+            <span className="text-6xl font-bold dark:text-white">{price}</span>
+            <span className="ml-2 text-xl text-gray-600 dark:text-gray-300">/{period}</span>
           </div>
         </div>
         
@@ -73,8 +73,8 @@ const PricingCard: React.FC<PricingCardProps> = ({
           <ul className="space-y-4">
             {features.map((feature, index) => (
               <li key={index} className="flex items-start">
-                <Check className="mr-3 h-5 w-5 text-black mt-0.5 flex-shrink-0" />
-                <span>{feature}</span>
+                <Check className="mr-3 h-5 w-5 text-black dark:text-white mt-0.5 flex-shrink-0" />
+                <span className="dark:text-gray-300">{feature}</span>
               </li>
             ))}
           </ul>
@@ -89,7 +89,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
               className={`w-full py-3 font-medium rounded-full transition-colors shadow-md ${
                 buttonVariant === "primary" 
                   ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg" 
-                  : "border-2 border-gray-400 hover:bg-gray-50 hover:shadow-lg text-gray-700"
+                  : "border-2 border-gray-400 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:shadow-lg text-gray-700 dark:text-gray-200"
               }`}
             >
               {buttonText}
@@ -111,9 +111,9 @@ interface FAQItemProps {
 // FAQ Accordion Item
 const FAQItem: React.FC<FAQItemProps> = ({ question, answer, isOpen, toggleOpen }) => {
   return (
-    <div className="border-b border-gray-200 py-5">
+    <div className="border-b border-gray-200 dark:border-zinc-700 py-5">
       <button 
-        className="flex justify-between items-center w-full text-left font-medium"
+        className="flex justify-between items-center w-full text-left font-medium dark:text-white"
         onClick={toggleOpen}
       >
         {question}
@@ -133,7 +133,7 @@ const FAQItem: React.FC<FAQItemProps> = ({ question, answer, isOpen, toggleOpen 
         </svg>
       </button>
       {isOpen && (
-        <div className="mt-3 text-gray-600">
+        <div className="mt-3 text-gray-600 dark:text-gray-300">
           {answer}
         </div>
       )}
@@ -228,27 +228,27 @@ export default function Pricing() {
   };
 
   return (
-    <section className="py-24 bg-gray-50 border-y border-gray-100" id="pricing">
+    <section className="py-24 bg-gray-50 dark:bg-zinc-900 border-y border-gray-100 dark:border-zinc-800" id="pricing">
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Simple, Transparent Pricing</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 dark:text-white">Simple, Transparent Pricing</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Choose the plan that works best for your tracking and forecasting needs
             </p>
           </div>
 
           {/* Tabs */}
           <div className="max-w-xs mx-auto mb-12">
-            <div className="grid grid-cols-2 rounded-lg overflow-hidden border">
+            <div className="grid grid-cols-2 rounded-lg overflow-hidden border dark:border-zinc-700">
               <button 
-                className={`py-3 font-medium ${activeTab === "monthly" ? "bg-emerald-600 text-white" : "bg-white"}`}
+                className={`py-3 font-medium ${activeTab === "monthly" ? "bg-emerald-600 text-white" : "bg-white dark:bg-zinc-800 dark:text-white"}`}
                 onClick={() => setActiveTab("monthly")}
               >
                 Monthly
               </button>
               <button 
-                className={`py-3 font-medium ${activeTab === "annually" ? "bg-emerald-600 text-white" : "bg-white"}`}
+                className={`py-3 font-medium ${activeTab === "annually" ? "bg-emerald-600 text-white" : "bg-white dark:bg-zinc-800 dark:text-white"}`}
                 onClick={() => setActiveTab("annually")}
               >
                 Annually
@@ -282,10 +282,10 @@ export default function Pricing() {
             />
 
             {/* FAQs */}
-            <div className="border-2 border-gray-300 rounded-xl overflow-hidden">
+            <div className="border-2 border-gray-300 dark:border-zinc-700 rounded-xl overflow-hidden dark:bg-zinc-900">
               <div className="p-8">
-                <h3 className="text-3xl font-bold mb-2">FAQs</h3>
-                <p className="text-gray-600 mb-8">Common questions about our plans</p>
+                <h3 className="text-3xl font-bold mb-2 dark:text-white">FAQs</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-8">Common questions about our plans</p>
                 
                 <div className="space-y-1">
                   <FAQItem 
@@ -309,7 +309,7 @@ export default function Pricing() {
                 </div>
                 
                 <div className="mt-8">
-                  <button className="w-full py-3 font-medium rounded-full transition-colors border-2 border-gray-400 hover:bg-gray-50 hover:shadow-lg shadow-md text-gray-700">
+                  <button className="w-full py-3 font-medium rounded-full transition-colors border-2 border-gray-400 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:shadow-lg shadow-md text-gray-700 dark:text-gray-200">
                     Contact Support
                   </button>
                 </div>

@@ -10,9 +10,16 @@ import {
   ArrowRight
 } from "lucide-react";
 import Pricing from "@/components/Pricing";
+import { Navbar } from "@/components/Navbar";
+
+type ButtonProps = {
+  children: React.ReactNode;
+  className?: string;
+  variant?: 'default' | 'outline';
+}
 
 // Button component with styling
-const Button = ({ children, className, variant = "default" }) => {
+const Button = ({ children, className, variant = "default" }: ButtonProps) => {
   const baseStyles = "font-medium rounded-full transition-colors px-4 py-2";
   const variantStyles = {
     default: "bg-blue-600 text-white hover:bg-blue-700",
@@ -26,23 +33,28 @@ const Button = ({ children, className, variant = "default" }) => {
   );
 };
 
+type AccordionItemProps = {
+  question: string;
+  children: React.ReactNode;
+}
+
 // Accordion component
-const AccordionItem = ({ question, children }) => {
+const AccordionItem = ({ question, children }: AccordionItemProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
   
   const toggleOpen = () => setIsOpen(!isOpen);
 
   return (
-    <div className="border rounded-lg p-2 bg-white mb-4">
+    <div className="border rounded-lg p-2 bg-white dark:bg-zinc-800 dark:border-zinc-700 mb-4">
       <button 
-        className="flex justify-between items-center w-full text-left font-medium px-4 py-3"
+        className="flex justify-between items-center w-full text-left font-medium px-4 py-3 dark:text-white"
         onClick={toggleOpen}
       >
         {question}
         <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
       </button>
       {isOpen && (
-        <div className="px-4 pt-2 pb-4 text-gray-600">
+        <div className="px-4 pt-2 pb-4 text-gray-600 dark:text-gray-300">
           {children}
         </div>
       )}
@@ -53,29 +65,8 @@ const AccordionItem = ({ question, children }) => {
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Navigation Bar */}
-      <header className="sticky top-0 z-10 w-full bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 flex items-center justify-between h-20">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-1xl md:text-3xl font-bold">Soloist.</h2>
-          </div>
-          
-          <nav className="hidden md:flex space-x-6 text-md">
-            <a href="#features" className="hover:text-gray-600 transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-gray-600 transition-colors">Pricing</a>
-            <a href="#faq" className="hover:text-gray-600 transition-colors">FAQs</a>
-          </nav>
-          
-          <div className="flex items-center space-x-3">
-            <button className="font-medium rounded-full transition-colors px-4 py-2 bg-white text-black hover:bg-gray-100 border border-black">
-              Login / Signup
-            </button>
-            <button className="font-medium rounded-full transition-colors px-4 py-2 bg-black text-white hover:bg-gray-800">
-              Get App
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Navigation Bar with Theme Toggle */}
+      <Navbar />
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -90,7 +81,7 @@ export default function LandingPage() {
                   Track. Reflect. Forecast.
                 </h1>
                 <p className="text-lg text-gray-600 mb-8">
-                  Soloist turns your everyday thoughts into color-coded insights and automated Forecasts, so you always know where you stand and are prepared for what&apos;s next.
+                  Soloist turns your everyday thoughts into color-coded insights and automated Forecasts, so you always know where you stand and you can prepare for what&apos;s coming next.
                 </p>
               </div>
 
@@ -126,49 +117,49 @@ export default function LandingPage() {
         </section>
 
         {/* Open Source Community Section */}
-        <section className="py-4 border-y bg-gray-50">
+        <section className="py-4 border-y bg-gray-50 dark:bg-zinc-900 dark:border-zinc-800">
           <div className="container mx-auto px-4">
             <div className="flex flex-wrap justify-center items-center gap-12 mb-6">
               <div className="flex flex-col items-center">
-                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 border border-zinc-400 p-5 rounded-full shadow-sm mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800">
+                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 dark:from-zinc-800 dark:to-zinc-700 border border-zinc-400 dark:border-zinc-600 p-5 rounded-full shadow-sm mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800 dark:text-gray-200">
                     <path d="M12 1v6a2 2 0 0 0 2 2h6" />
                     <path d="M9 21h6a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L12 4" />
                     <path d="M8 17a5 5 0 1 0 0-10" />
                     <path d="M5 19a7 7 0 0 1 0-14" />
                   </svg>
                 </div>
-                <p className="font-medium">Open Code</p>
-                <p className="text-sm text-gray-500 text-center">Fully transparent codebase</p>
+                <p className="font-medium dark:text-white">Open Code</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Fully transparent codebase</p>
               </div>
               
               <div className="flex flex-col items-center">
-                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 border border-zinc-400 p-5 rounded-full shadow-sm mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800">
+                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 dark:from-zinc-800 dark:to-zinc-700 border border-zinc-400 dark:border-zinc-600 p-5 rounded-full shadow-sm mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800 dark:text-gray-200">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 </div>
-                <p className="font-medium">Community-Driven</p>
-                <p className="text-sm text-gray-500 text-center">Shaped by our users</p>
+                <p className="font-medium dark:text-white">Community-Driven</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Shaped by our users</p>
               </div>
               
               <div className="flex flex-col items-center">
-                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 border border-zinc-400 p-5 rounded-full shadow-sm mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800">
+                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 dark:from-zinc-800 dark:to-zinc-700 border border-zinc-400 dark:border-zinc-600 p-5 rounded-full shadow-sm mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800 dark:text-gray-200">
                     <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                 </div>
-                <p className="font-medium">Privacy-Focused</p>
-                <p className="text-sm text-gray-500 text-center">Your data stays yours</p>
+                <p className="font-medium dark:text-white">Privacy-Focused</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Your data stays yours</p>
               </div>
               
               <div className="flex flex-col items-center">
-                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 border border-zinc-400 p-5 rounded-full shadow-sm mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800">
+                <div className="bg-gradient-to-br from-zinc-100 to-zinc-300 dark:from-zinc-800 dark:to-zinc-700 border border-zinc-400 dark:border-zinc-600 p-5 rounded-full shadow-sm mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-800 dark:text-gray-200">
                     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                     <polyline points="14 2 14 8 20 8" />
                     <line x1="16" x2="8" y1="13" y2="13" />
@@ -176,8 +167,8 @@ export default function LandingPage() {
                     <line x1="10" x2="8" y1="9" y2="9" />
                   </svg>
                 </div>
-                <p className="font-medium">Transparent Roadmap</p>
-                <p className="text-sm text-gray-500 text-center">Openly planned future</p>
+                <p className="font-medium dark:text-white">Transparent Roadmap</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Openly planned future</p>
               </div>
             </div>
             
@@ -197,7 +188,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <p className="text-center text-xs text-gray-600 max-w-3xl mx-auto mt-4">
+              <p className="text-center text-xs text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mt-4">
                 Soloist is proudly open source, embracing transparency and collaboration.
                 We believe in building technology that&apos;s accountable to its users and community.
               </p>
@@ -208,17 +199,29 @@ export default function LandingPage() {
         {/* Features Section */}
         <section id="features" className="py-16 container mx-auto px-4 mt-8">
           {/* Feature 1 */}
-          <div className="flex flex-col md:flex-row items-center gap-8 mb-24">
+          <div className="flex flex-col md:flex-row gap-8 mb-24">
             <div className="md:w-1/2 space-y-4">
-              <h3 className="text-2xl font-bold">Your Daily Well-Being at a Glance.</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold dark:text-white">Your Daily Well-Being at a Glance.</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 The color-coded heatmap turns 365 scattered journal entries into one elegant, scrollable canvas. Instantly spot winning streaks, analyze looming slumps, and forecast your mood for tomorrow.
               </p>
-              <div className="pt-4 pb-32">
-                <button className="flex items-center gap-2 p-0 font-medium text-blue-600 hover:text-blue-800">
+              <div className="pt-4">
+                <button className="flex items-center gap-2 p-0 font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
                   Learn more <ArrowRight size={16} />
                 </button>
               </div>
+              {/* Feature8 image - temporarily disabled
+              <div className="mt-18">
+                <img 
+                  src="/Feature8.png" 
+                  alt="Daily Well-Being Dashboard" 
+                  className="w-full h-auto object-contain"
+                  loading="lazy"
+                  width={1024}
+                  height={768}
+                />
+              </div>
+              */}
             </div>
             <div className="md:w-1/2 aspect-video w-full">
               <div className="h-full w-full flex items-center justify-center text-gray-400">
@@ -238,8 +241,8 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 gap-8">
             {/* Feature 2 */}
             <div className="space-y-4">
-              <h3 className="text-2xl font-bold">Review the Past, Ready the Future.</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold dark:text-white">Review the Past, Ready the Future.</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Soloist&apos;s Playground lets you look back to learn—and gear up for what&apos;s coming next.
               </p>
               <div className="pt-4 mb-6">
@@ -261,8 +264,8 @@ export default function LandingPage() {
             
             {/* Feature 3 */}
             <div className="space-y-4">
-              <h3 className="text-2xl font-bold">See the Patterns. Shape the Progress.</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold dark:text-white">See the Patterns. Shape the Progress.</h3>
+              <p className="text-gray-600 dark:text-gray-300">
               pinpoint why today felt different, watch real-time charts reveal emerging trends, and tag moments before they fade.
               </p>
               <div className="pt-4 mb-6">
@@ -288,9 +291,9 @@ export default function LandingPage() {
         <Pricing />
 
         {/* FAQ Section */}
-        <section id="faq" className="py-16 bg-gray-50">
+        <section id="faq" className="py-16 bg-gray-50 dark:bg-zinc-900 dark:border-zinc-800">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-16">FAQ Section</h2>
+            <h2 className="text-3xl font-bold text-center mb-16 dark:text-white">FAQ Section</h2>
             
             <div className="max-w-3xl mx-auto">
               <AccordionItem question="Is it free to start?">
@@ -312,8 +315,8 @@ export default function LandingPage() {
         {/* Final CTA */}
         <section className="py-16 container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <h2 className="text-3xl md:text-4xl font-bold">CTA Heading</h2>
-            <p className="text-xl text-gray-600">
+            <h2 className="text-3xl md:text-4xl font-bold dark:text-white">CTA Heading</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">
               Reinforce the download offer, repeat what matters most to your users, and make it very clear what the next step is.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
@@ -330,24 +333,24 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t py-8">
+      <footer className="bg-white dark:bg-zinc-900 border-t dark:border-zinc-800 py-8">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               © 2025 Company Name. All Rights Reserved.
             </p>
             
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-gray-400 hover:text-gray-600">
+              <a href="#" className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 LinkedIn
               </a>
-              <a href="#" className="text-gray-400 hover:text-gray-600">
+              <a href="#" className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 Instagram
               </a>
-              <a href="#" className="text-gray-400 hover:text-gray-600">
+              <a href="#" className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 Facebook
               </a>
-              <a href="#" className="text-gray-400 hover:text-gray-600">
+              <a href="#" className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                 Twitter
               </a>
             </div>
